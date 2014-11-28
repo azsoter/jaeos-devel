@@ -3,7 +3,7 @@ jaeos-devel
 
 Just Another Embedded OS -- Development Version
 
-The acronym JAEOS is pronouced as _jay_-_oh_-_es_.
+The acronym JaeOS is pronouced as _jay_-_oh_-_es_.
 
 Even though there are plenty of operating systems for embedded applications ranging
 from school assignment projects to full-featured commertial ones with support, I have
