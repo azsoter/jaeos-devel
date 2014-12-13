@@ -26,6 +26,34 @@
 #include <rtos_internals.h>
 #include <board.h>
 
+#if defined(RTOS_THUMB_SUPPORT)
+#if defined(__thumb__)
+#error This section of code cannot be compiled in THUMB mode. Your Makefile is probably broken.
+#endif
+RTOS_Critical_State rtos_arm_disableInterrupts(void)
+{
+	RTOS_Critical_State saved_state;
+	rtos_disableInterrupts(saved_state);
+	return saved_state;
+}
+
+void rtos_arm_enableInterrupts(void)
+{
+	rtos_enableInterrupts();
+}
+
+void rtos_arm_restoreInterrupts(RTOS_Critical_State saved_state)
+{
+	rtos_restoreInterrupts(saved_state); 
+}
+
+uint32_t rtos_arm_CLZ(uint32_t x)
+{
+	return __builtin_clz(x);
+}
+
+#endif
+
 #define RTOS_RESTORE_CONTEXT()	\
 { \
 	__asm__ volatile ("LDR		R0, =RTOS");		/* The address of the RTOS structure.*/ 	\
@@ -57,8 +85,20 @@
 
 void rtos_DispatchScheduler(void)
 {
-	uint32_t code = *(uint32_t *)(((rtos_StackFrame *)(RTOS.CurrentTask->SP))->regs[15] - 8); // The SWI instruction.
-	code = code & 0x00FFFFFF;
+	uint32_t code;
+	uint32_t spsr = ((rtos_StackFrame *)(RTOS_CURRENT_TASK()->SP))->spsr;
+
+	if (0 == (0x20 & spsr))
+	{
+		code = *(uint32_t *)(((rtos_StackFrame *)(RTOS_CURRENT_TASK()->SP))->regs[15] - 8); // The SWI instruction.
+		code = code & 0x00FFFFFF;
+	}
+	else
+	{
+		code = *(uint16_t *)(((rtos_StackFrame *)(RTOS_CURRENT_TASK()->SP))->regs[15] - 6); // The SWI instruction.
+		// PrintHex(code);
+		code = code & 0x00FF;
+	}
 	switch(code)
 	{
 		case 0:	
@@ -77,7 +117,7 @@ void rtos_Invoke_Scheduler(void) __attribute__((interrupt("SWI"), naked));
 void rtos_Invoke_Scheduler(void)
 {
 	// The return address after an SVC instruction is off by one instruction
-	// compared to where it woudl be after an IRQ, adjust for that.
+	// compared to where it would be after an IRQ, adjust for that.
 	__asm volatile ( "ADD		LR, LR, #4" );
 	RTOS_SAVE_CONTEXT();
 	__asm__ volatile ("bl rtos_DispatchScheduler");

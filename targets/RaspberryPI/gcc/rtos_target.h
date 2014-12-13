@@ -49,18 +49,30 @@
 
 
 #define RTOS_SavedCriticalState(X) 	RTOS_Critical_State X
+
+#if defined(__thumb__)
+extern RTOS_Critical_State rtos_arm_disableInterrupts(void);
+extern void rtos_arm_enableInterrupts(void);
+extern void rtos_arm_restoreInterrupts(RTOS_Critical_State saved_state);
+extern uint32_t rtos_arm_CLZ(uint32_t x);
+#define RTOS_EnterCriticalSection(X)	(X) = rtos_arm_disableInterrupts()
+#define RTOS_ExitCriticalSection(X)	rtos_arm_restoreInterrupts(X)
+#define RTOS_DisableInterrupts()	(void)rtos_arm_disableInterrupts()
+#define RTOS_EnableInterrupts()		rtos_arm_enableInterrupts()
+#define rtos_CLZ(X)			rtos_arm_CLZ(X)
+#else
 #define RTOS_EnterCriticalSection(X)	rtos_disableInterrupts(X)
 #define RTOS_ExitCriticalSection(X)	rtos_restoreInterrupts(X)
+#define RTOS_EnableInterrupts()		rtos_enableInterrupts()
+#define RTOS_DisableInterrupts()	do { RTOS_Critical_State rtos_tmp_saved; rtos_disableInterrupts(rtos_tmp_saved); } while(0)
+#define rtos_CLZ(X)			__builtin_clzl(X)
+#endif
 
-#define RTOS_EnableInterrupts() rtos_enableInterrupts()
-#define RTOS_DisableInterrupts() do { RTOS_Critical_State rtos_tmp_saved; rtos_disableInterrupts(rtos_tmp_saved); } while(0)
 
 
-extern int _write(int fd, void *prt, unsigned int count);
+// extern int _write(int fd, void *prt, unsigned int count);
 
 #define RTOS_INLINE static inline
-
-#define rtos_CLZ(X) __builtin_clzl(X)
 
 #define RTOS_INVOKE_SCHEDULER() __asm volatile ( "SWI 0" ) 
 #define RTOS_INVOKE_YIELD() __asm volatile ( "SWI 1" ) 
