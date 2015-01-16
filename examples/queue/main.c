@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -79,7 +79,7 @@ void Producer(void *p)
 	PrintHex(stuff);
 	Board_Putc('\r');
 	Board_Putc('\n');
-	RTOS_Enqueue(&q, (void *)(stuff));
+	RTOS_Enqueue(&q, (void *)(stuff), 0);
     }
     (void)p;
 }

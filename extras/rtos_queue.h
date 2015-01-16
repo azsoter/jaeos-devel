@@ -1,7 +1,7 @@
 #ifndef RTOS_QUEUE_H
 #define RTOS_QUEUE_H
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,8 @@ typedef RTOS_SemaphoreCount RTOS_QueueCount;
 
 struct RTOS_Queue	// A FIFO (Queue or message queue).
 {
-	RTOS_Semaphore  Sync;
+	RTOS_Semaphore  SemFilledSlots;	// Semaphore conting filled slots.
+	RTOS_Semaphore  SemEmptySlots;	// Semaphore conting empty  slots.
 	RTOS_QueueCount Size;
 	RTOS_QueueCount Head;
 	RTOS_QueueCount Tail;
@@ -46,9 +47,10 @@ typedef struct RTOS_Queue RTOS_Queue;
 
 extern RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount size);
 extern RTOS_RegInt RTOS_DestroyQueue(RTOS_Queue *queue);
-extern RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message);
-extern RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout);
-extern void *RTOS_PeekQueue(RTOS_Queue *queue);
+extern RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message, RTOS_Time timeout);		// Append  to the end.
+extern RTOS_RegInt RTOS_PrependQueue(RTOS_Queue *queue, void *message, RTOS_Time timeout);	// Prepend to the front.
+extern RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout);		// Consume from the front.
+extern RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **value);				// Look at the first element but do not remove it.
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,8 @@ RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount si
 	RTOS_EnterCriticalSection(saved_state);
 	queue->Head = 0;
 	queue->Tail = 0;
-	result = RTOS_CreateSemaphore(&(queue->Sync), 0);
+	result = RTOS_CreateSemaphore(&(queue->SemFilledSlots), 0);
+	result = RTOS_CreateSemaphore(&(queue->SemEmptySlots), size);
 	if (RTOS_OK == result)
 	{
 		queue->Size = size;
@@ -72,9 +73,9 @@ RTOS_INLINE RTOS_QueueCount rtos_NextIndexInQueue(RTOS_Queue *queue, RTOS_QueueC
 	return ix;
 }
 
-RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message)
+RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message, RTOS_Time timeout)
 {
-	RTOS_RegInt result = RTOS_OK;
+	RTOS_RegInt result;
 	RTOS_SavedCriticalState(saved_state);
 
 #if defined(RTOS_USE_ASSERTS)
@@ -87,30 +88,92 @@ RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message)
 		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 #endif
-
-	RTOS_EnterCriticalSection(saved_state);
-
-	if ((0 == queue->Size) || (0 == queue->Buffer))
+	if ((0 != timeout) && (0 != RTOS_IsInsideIsr()))
 	{
-		RTOS_ExitCriticalSection(saved_state);
-		return  RTOS_ERROR_OPERATION_NOT_PERMITTED;
+		return RTOS_ERROR_FAILED;
 	}
 
-	if (queue->Size <= RTOS_PeekSemaphore(&(queue->Sync)))
-	{
-		result = RTOS_ERROR_FAILED;
-	}
-	else
-	{
-		queue->Buffer[queue->Tail] = message;
-		queue->Tail = rtos_NextIndexInQueue(queue, queue->Tail);
-	}
-
-	RTOS_ExitCriticalSection(saved_state);
+	result = RTOS_GetSemaphore(&(queue->SemEmptySlots), timeout);
 
 	if (RTOS_OK == result)
 	{
-		return RTOS_PostSemaphore(&(queue->Sync));
+
+		RTOS_EnterCriticalSection(saved_state);
+
+		// Check if the queue was destroyed by another thread after the GetSempahore() operation.
+		if ((0 == queue->Size) || (0 == queue->Buffer))
+		{
+			result = RTOS_ERROR_OPERATION_NOT_PERMITTED;
+		}
+		else
+		{
+			queue->Buffer[queue->Tail] = message;
+			queue->Tail = rtos_NextIndexInQueue(queue, queue->Tail);
+		}
+
+		RTOS_ExitCriticalSection(saved_state);
+	}
+
+	if (RTOS_OK == result)
+	{
+		return RTOS_PostSemaphore(&(queue->SemFilledSlots));
+	}
+
+	return result;
+}
+
+// Push a message (back) to a queue, i.e. prepend it at the head of the queue.
+RTOS_RegInt RTOS_PrependQueue(RTOS_Queue *queue, void *message, RTOS_Time timeout)
+{
+	RTOS_RegInt result;
+	RTOS_SavedCriticalState(saved_state);
+
+#if defined(RTOS_USE_ASSERTS)
+	RTOS_ASSERT(0 != queue);
+#endif
+
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
+	if (0 == queue)
+	{
+		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
+#endif
+	if ((0 != timeout) && (0 != RTOS_IsInsideIsr()))
+	{
+		return RTOS_ERROR_FAILED;
+	}
+
+	result = RTOS_GetSemaphore(&(queue->SemEmptySlots), timeout);
+
+	if (RTOS_OK == result)
+	{
+
+		RTOS_EnterCriticalSection(saved_state);
+
+		// Check if the queue was destroyed by another thread after the GetSempahore() operation.
+		if ((0 == queue->Size) || (0 == queue->Buffer))
+		{
+			result = RTOS_ERROR_OPERATION_NOT_PERMITTED;
+		}
+		else
+		{
+			if (0 == queue->Head)
+			{
+				queue->Head = queue->Size - 1;
+			}
+			else
+			{
+				queue->Head -= 1;
+			}
+			queue->Buffer[queue->Head] = message;
+		}
+
+		RTOS_ExitCriticalSection(saved_state);
+	}
+
+	if (RTOS_OK == result)
+	{
+		return RTOS_PostSemaphore(&(queue->SemFilledSlots));
 	}
 
 	return result;
@@ -137,14 +200,13 @@ RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout)
 		return RTOS_ERROR_FAILED;
 	}
 
-	result = RTOS_GetSemaphore(&(queue->Sync), timeout);
+	result = RTOS_GetSemaphore(&(queue->SemFilledSlots), timeout);
 
 	if (RTOS_OK == result)
 	{
 		RTOS_EnterCriticalSection(saved_state);
 
-		// Check if the queue was destroyed by another thread
-		// after the GetSempahore() operation.
+		// Check if the queue was destroyed by another thread after the GetSempahore() operation.
 		if ((0 == queue->Size) || (0 == queue->Buffer))
 		{
 			result = RTOS_ERROR_OPERATION_NOT_PERMITTED;
@@ -158,41 +220,50 @@ RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout)
 		RTOS_ExitCriticalSection(saved_state);
 	}
 
+	if (RTOS_OK == result)
+	{
+		RTOS_PostSemaphore(&(queue->SemEmptySlots));
+	}
+
 	return result;
 }
 
-// Take a peek to the first element in the queue but do not remove it.
-void *RTOS_PeekQueue(RTOS_Queue *queue)
+// Take a peek at the first element in the queue but do not remove it.
+RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **value)
 {
-	void *result;
+	RTOS_RegInt result;
 	RTOS_SavedCriticalState(saved_state);
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != queue);
 #endif
+
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
 	if (0 == queue)
 	{
-		return (void *)0;
+		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
+#endif
 		
 	RTOS_EnterCriticalSection(saved_state);
 
 	if ((0 == queue->Size) || (0 == queue->Buffer))
 	{
-		// Queue is invalid / uninitialized.
-		result = (void *)0;
+		result = RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 	else
 	{
-		if (0 == RTOS_PeekSemaphore(&(queue->Sync)))
+		if (0 == RTOS_PeekSemaphore(&(queue->SemFilledSlots)))
 		{
 			// Queue is empty.
-			result = (void *)0;
+			result = RTOS_ERROR_FAILED;
 		}
 		else
 		{
-			result = queue->Buffer[queue->Head];
+			*value = queue->Buffer[queue->Head];
+			result = RTOS_OK;
 		}
 	}
+
 	RTOS_ExitCriticalSection(saved_state);
 
 	return result;
@@ -216,7 +287,7 @@ RTOS_RegInt RTOS_DestroyQueue(RTOS_Queue *queue)
 
 	RTOS_EnterCriticalSection(saved_state);
 	
-	if (0 != RTOS_PeekSemaphore(&(queue->Sync)))
+	if (0 != RTOS_PeekSemaphore(&(queue->SemFilledSlots)))
 	{
 		result = RTOS_ERROR_FAILED;
 	}
