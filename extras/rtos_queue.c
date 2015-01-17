@@ -186,10 +186,11 @@ RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout)
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != queue);
+	RTOS_ASSERT(0 != message);
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
-	if (0 == queue)
+	if ((0 == queue) || (0 == message))
 	{
 		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
@@ -229,16 +230,17 @@ RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout)
 }
 
 // Take a peek at the first element in the queue but do not remove it.
-RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **value)
+RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **message)
 {
 	RTOS_RegInt result;
 	RTOS_SavedCriticalState(saved_state);
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != queue);
+	RTOS_ASSERT(0 != message);
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
-	if (0 == queue)
+	if ((0 == queue) || (0 == message))
 	{
 		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
@@ -259,7 +261,7 @@ RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **value)
 		}
 		else
 		{
-			*value = queue->Buffer[queue->Head];
+			*message = queue->Buffer[queue->Head];
 			result = RTOS_OK;
 		}
 	}

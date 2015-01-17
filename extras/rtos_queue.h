@@ -50,7 +50,7 @@ extern RTOS_RegInt RTOS_DestroyQueue(RTOS_Queue *queue);
 extern RTOS_RegInt RTOS_Enqueue(RTOS_Queue *queue, void *message, RTOS_Time timeout);		// Append  to the end.
 extern RTOS_RegInt RTOS_PrependQueue(RTOS_Queue *queue, void *message, RTOS_Time timeout);	// Prepend to the front.
 extern RTOS_RegInt RTOS_Dequeue(RTOS_Queue *queue, void **message, RTOS_Time timeout);		// Consume from the front.
-extern RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **value);				// Look at the first element but do not remove it.
+extern RTOS_RegInt RTOS_PeekQueue(RTOS_Queue *queue, void **message);				// Look at the first element but do not remove it.
 
 #ifdef __cplusplus
 }
