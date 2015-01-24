@@ -1,7 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -270,7 +270,7 @@ extern RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event);
 #endif
 
 #if defined(RTOS_INCLUDE_CHANGEPRIORITY)
-extern RTOS_RegInt RTOS_ChangePriority(RTOS_TaskPriority targetPriority);
+extern RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriority);
 #endif
 
 #if defined(RTOS_INCLUDE_KILLTASK)

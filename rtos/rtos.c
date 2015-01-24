@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -980,26 +980,28 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 #endif
 
 #if defined(RTOS_INCLUDE_CHANGEPRIORITY)
-// Only change priority of the current task is supported.
-RTOS_RegInt RTOS_ChangePriority(RTOS_TaskPriority targetPriority)
+RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriority)
 {
+	RTOS_TaskPriority oldPriority;
 	RTOS_RegInt result = RTOS_OK;
 
 	RTOS_SavedCriticalState(saved_state);
 
 #if defined(RTOS_USE_ASSERTS)
-	RTOS_ASSERT(!RTOS_IsInsideIsr());
-	RTOS_ASSERT(!RTOS_SchedulerIsLocked());
+	RTOS_ASSERT(0 != task);
+	RTOS_ASSERT((targetPriority <= RTOS_Priority_Highest) && (RTOS_Priority_Idle != targetPriority));
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
-    	if (RTOS_IsInsideIsr() || RTOS_SchedulerIsLocked())
+    	if (0 == task)
     	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
     	}
 #endif
 
-	if (RTOS.CurrentTask->Priority == targetPriority)
+ 	oldPriority = task->Priority;
+
+	if (oldPriority == targetPriority)
 	{
 		return RTOS_OK;
 	}
@@ -1017,23 +1019,60 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_TaskPriority targetPriority)
 	}
 	else
 	{
-		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, RTOS.CurrentTask->Priority);
-		RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, targetPriority);
-#if defined(RTOS_SUPPORT_TIMESHARE)
-		if (RTOS_TaskSet_IsMember(RTOS.TimeshareTasks,  RTOS.CurrentTask->Priority))
+		if (RTOS_TaskSet_IsMember(RTOS.ReadyToRunTasks,  oldPriority))
 		{
-			RTOS_TaskSet_RemoveMember(RTOS.TimeshareTasks, RTOS.CurrentTask->Priority);
+			RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, oldPriority);
+			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, targetPriority);
+		}
+		else
+		{	
+			if ((0 != task->WaitFor) && (RTOS_TaskSet_IsMember(task->WaitFor->TasksWaiting,  oldPriority)))
+			{
+				RTOS_TaskSet_RemoveMember(task->WaitFor->TasksWaiting, oldPriority);
+				RTOS_TaskSet_AddMember(task->WaitFor->TasksWaiting, targetPriority);
+			}
+#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
+			else if (RTOS_TaskSet_IsMember(RTOS.SuspendedTasks,  oldPriority))
+			{
+				RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, oldPriority);
+				RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, targetPriority);
+			}
+#endif
+		}
+
+#if defined(RTOS_SUPPORT_TIMESHARE)
+		if (RTOS_TaskSet_IsMember(RTOS.TimeshareTasks,  oldPriority))
+		{
+			RTOS_TaskSet_RemoveMember(RTOS.TimeshareTasks, oldPriority);
 			RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, targetPriority);
+
+			if (RTOS_TaskSet_IsMember(RTOS.PreemptedTasks,  oldPriority))
+			{
+				RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, oldPriority);
+				RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, targetPriority);
+			}
 		}
 #endif
-		RTOS.TaskList[targetPriority] = RTOS.CurrentTask;
-		RTOS.TaskList[RTOS.CurrentTask->Priority] = 0;
-		RTOS.CurrentTask->Priority = targetPriority;
+
+#if defined(RTOS_SUPPORT_SLEEP)
+		if (task == RTOS.Sleepers[oldPriority])
+		{
+			RTOS.Sleepers[targetPriority] = task;
+			RTOS.Sleepers[oldPriority] = 0;
+		}
+#endif
+
+		RTOS.TaskList[targetPriority] = task;
+		RTOS.TaskList[oldPriority] = 0;
+		task->Priority = targetPriority;
 	}
 
 	RTOS_ExitCriticalSection(saved_state);
 
-	RTOS_INVOKE_SCHEDULER();
+    	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
+    	{
+		RTOS_INVOKE_SCHEDULER();
+	}
 	
 	return result;
 }
