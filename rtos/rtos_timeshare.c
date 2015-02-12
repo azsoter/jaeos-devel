@@ -2,7 +2,7 @@
 #include <rtos_internals.h>
 
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -178,14 +178,18 @@ void rtos_SchedulePeer(void)
 
 void RTOS_YieldTimeSlice(void)
 {
+	volatile RTOS_Task *thisTask;
+
 	RTOS_SavedCriticalState(saved_state);
 
-	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()) && (RTOS.CurrentTask->IsTimeshared))
+	thisTask = RTOS_CURRENT_TASK();
+
+	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()) && (thisTask->IsTimeshared))
 	{
 		RTOS_EnterCriticalSection(saved_state);
 		if (0 != RTOS.PreemptedList.Head)
 		{
-			rtos_PreemptTask(RTOS.CurrentTask);
+			rtos_PreemptTask(thisTask);
 			rtos_SchedulePeer();
 		}
 		RTOS_ExitCriticalSection(saved_state);
@@ -195,7 +199,7 @@ void RTOS_YieldTimeSlice(void)
 
 void rtos_DeductTick(RTOS_Task *task)
 {
-	if ((0 != task->TicksToRun) && ((RTOS_TIMEOUT_FOREVER) != RTOS.CurrentTask->TicksToRun))
+	if ((0 != task->TicksToRun) && ((RTOS_TIMEOUT_FOREVER) != task->TicksToRun))
 	{
 		task->TicksToRun--;
 		task->TimeWatermark = RTOS.Time;

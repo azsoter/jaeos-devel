@@ -1,7 +1,7 @@
 #ifndef RTOS_INTERNALS_H
 #define RTOS_INTERNALS_H
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,9 @@ extern void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapaci
 
 // Initialization.
 extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(), void *param);
+
+#define RTOS_SET_CURRENT_TASK(TASK) RTOS.CurrentTask = (TASK)
+
 // These should only be called by the target port or other OS components.
 extern void rtos_TimerTick(void);
 extern void rtos_Scheduler(void);

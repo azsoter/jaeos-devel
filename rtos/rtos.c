@@ -143,25 +143,37 @@ void RTOS_SetTaskName(RTOS_Task *task, const char *name)
 // -----------------------------------------------------------------------------------
 void rtos_RunTask(void)
 {
+	volatile RTOS_Task *thisTask;
+	RTOS_TaskPriority priority;
+
 	RTOS_SavedCriticalState(saved_state);
 
+	thisTask = RTOS_CURRENT_TASK();
+
 	// Execute the task's function.
-	RTOS.CurrentTask->Action(RTOS.CurrentTask->Parameter);
+	thisTask->Action(thisTask->Parameter);
 
  	// If the tasks function has returned just kill the task and try to clean up after it as much as possible.
 	// There is no real resource management, so the task should first do its own clean up.
 	RTOS_EnterCriticalSection(saved_state);
+
+	thisTask = RTOS_CURRENT_TASK();
+
+	priority = thisTask->Priority;
+
 	// Task is removed from the ready to run set.
 	// No other sets are touched. The assumption is that the task cannot be sleeping or waiting for some event 
 	// since it is obviously executing otherwise we would not be here.
-	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, RTOS.CurrentTask->Priority);
+	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, priority);
+
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	// Make sure the task is not in the time share set.
-	RTOS_TaskSet_RemoveMember(RTOS.TimeshareTasks, RTOS.CurrentTask->Priority);
+	RTOS_TaskSet_RemoveMember(RTOS.TimeshareTasks, priority);
 #endif
+
 	// Remove task from the list of valid tasks and mark it as killed.
-	RTOS.TaskList[RTOS.CurrentTask->Priority] = 0;
-	RTOS.CurrentTask->Status = RTOS_TASK_STATUS_KILLED;
+	RTOS.TaskList[priority] = 0;
+	thisTask->Status = RTOS_TASK_STATUS_KILLED;
 	// RTOS_ExitCriticalSection(saved_state); // -- Not actually necessary, could be harmful?
 	// Invoke the scheduler to select a different task to run.
 	RTOS_INVOKE_SCHEDULER();
@@ -208,7 +220,7 @@ void rtos_Scheduler(void)
 	}
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared(RTOS.CurrentTask);
+	rtos_ManageTimeshared(RTOS_CURRENT_TASK());
 #endif
 
 	priority = RTOS_GetHighestPriorityInSet(RTOS.ReadyToRunTasks);
@@ -216,13 +228,14 @@ void rtos_Scheduler(void)
 
 	if (0 != task)
 	{
-		RTOS.CurrentTask = task;
+		RTOS_SET_CURRENT_TASK(task);
 	}
 }
 
 #if defined(RTOS_INVOKE_YIELD)
 void rtos_SchedulerForYield(void)
 {
+	RTOS_TaskPriority currentPriority;
 	RTOS_TaskPriority priority;
 	RTOS_Task *task;
 	RTOS_TaskSet tasks;
@@ -234,14 +247,15 @@ void rtos_SchedulerForYield(void)
 	}
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared(RTOS.CurrentTask);
+	rtos_ManageTimeshared(RTOS_CURRENT_TASK());
 #endif
 
 	tasks = RTOS.ReadyToRunTasks;
-	RTOS_TaskSet_RemoveMember(tasks, RTOS.CurrentTask->Priority);	// Not the current task.
+	currentPriority = RTOS_CURRENT_TASK()->Priority;
+	RTOS_TaskSet_RemoveMember(tasks, currentPriority);	// Not the current task.
 	RTOS_TaskSet_RemoveMember(tasks, RTOS_Priority_Idle);		// Not the idle task.
 	
-	t = tasks & ~((~(RTOS_TaskSet)0) << RTOS.CurrentTask->Priority);
+	t = tasks & ~((~(RTOS_TaskSet)0) << currentPriority);
 
 	priority = RTOS_GetHighestPriorityInSet(t);
 	task = rtos_TaskFromPriority(priority);
@@ -254,7 +268,7 @@ void rtos_SchedulerForYield(void)
 
 	if (0 != task)
 	{
-		RTOS.CurrentTask = task;
+		RTOS_SET_CURRENT_TASK(task);
 	}
 }
 
@@ -331,12 +345,15 @@ RTOS_INLINE void rtos_RemoveFromSleepers(RTOS_Task *task)
 RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 {
     	RTOS_RegInt result;
+	volatile RTOS_Task *thisTask;
 	RTOS_SavedCriticalState(saved_state);
+
+	thisTask = RTOS_CURRENT_TASK();
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(!RTOS_IsInsideIsr());
 	RTOS_ASSERT(!RTOS_SchedulerIsLocked());
-	RTOS_ASSERT(RTOS_Priority_Idle != RTOS.CurrentTask->Priority);
+	RTOS_ASSERT(RTOS_Priority_Idle != thisTask->Priority);
 
 #endif
 
@@ -346,9 +363,8 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
     	}
 
-
 	// The Idle task cannot sleep!
-	if (RTOS_Priority_Idle == RTOS.CurrentTask->Priority)
+	if (RTOS_Priority_Idle == thisTask->Priority)
 	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
@@ -363,27 +379,27 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 #endif
-    	RTOS.CurrentTask->WakeUpTime = absolute ? time : (RTOS.Time + time);
-    	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, RTOS.CurrentTask->Priority);
-    	RTOS.CurrentTask->Status = RTOS_TASK_STATUS_SLEEPING;
+    	thisTask->WakeUpTime = absolute ? time : (RTOS.Time + time);
+    	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, thisTask->Priority);
+    	thisTask->Status = RTOS_TASK_STATUS_SLEEPING;
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	if (RTOS.CurrentTask->IsTimeshared)
+	if (thisTask->IsTimeshared)
 	{
-		RTOS.CurrentTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Previous = 0;
-		RTOS.CurrentTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Next = 0;
+		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Previous = 0;
+		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Next = 0;
 		rtos_SchedulePeer();
 	}
 #endif
-	rtos_AddToSleepers(RTOS.CurrentTask);
+	rtos_AddToSleepers(thisTask);
     	RTOS_ExitCriticalSection(saved_state);
     	RTOS_INVOKE_SCHEDULER();
     	RTOS_EnterCriticalSection(saved_state);
 #if defined( RTOS_INCLUDE_WAKEUP)
-    	result = (RTOS_TASK_STATUS_AWAKENED == RTOS.CurrentTask->Status) ? RTOS_ABORTED : RTOS_OK;
+    	result = (RTOS_TASK_STATUS_AWAKENED == thisTask->Status) ? RTOS_ABORTED : RTOS_OK;
 #else
     	result = RTOS_OK;
 #endif
-	RTOS.CurrentTask->Status = RTOS_TASK_STATUS_ACTIVE;
+	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
     	RTOS_ExitCriticalSection(saved_state);
 	return result;
 }
@@ -427,7 +443,7 @@ RTOS_INLINE void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTO
 
         if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
         {
-		RTOS.CurrentTask->WakeUpTime = RTOS.Time + timeout;
+		task->WakeUpTime = RTOS.Time + timeout;
 		rtos_AddToSleepers(task);
         }
 }
@@ -524,6 +540,8 @@ RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event)
 RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 {
 	RTOS_RegInt result;
+	volatile RTOS_Task *thisTask;
+	RTOS_RegInt status;
 	RTOS_SavedCriticalState(saved_state);
 
 #if defined(RTOS_USE_ASSERTS)
@@ -554,18 +572,28 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
     	}
 #endif
 
-	rtos_WaitForEvent(event, RTOS.CurrentTask, timeout);
+	thisTask = RTOS_CURRENT_TASK();
+
+	rtos_WaitForEvent(event, thisTask, timeout);
+
 	RTOS_ExitCriticalSection(saved_state);
+
 	RTOS_INVOKE_SCHEDULER();
+
 	RTOS_EnterCriticalSection(saved_state);
+
+	status = thisTask->Status;
+	
 #if defined( RTOS_INCLUDE_WAKEUP)
-    	result = (RTOS_TASK_STATUS_TIMED_OUT == RTOS.CurrentTask->Status) ? RTOS_TIMED_OUT : 
-						((RTOS_TASK_STATUS_AWAKENED == RTOS.CurrentTask->Status) ? RTOS_ABORTED : RTOS_OK);
+    	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : ((RTOS_TASK_STATUS_AWAKENED == status) ? RTOS_ABORTED : RTOS_OK);
 #else
-    	result = (RTOS_TASK_STATUS_TIMED_OUT == RTOS.CurrentTask->Status) ? RTOS_TIMED_OUT : RTOS_OK;
+    	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : RTOS_OK;
 #endif
-	RTOS.CurrentTask->Status = RTOS_TASK_STATUS_ACTIVE;
+
+	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
+
     	RTOS_ExitCriticalSection(saved_state);
+
 	return result;
 }
 
@@ -669,7 +697,10 @@ RTOS_RegInt RTOS_PostSemaphore(RTOS_Semaphore *semaphore)
 RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
 {
     	RTOS_RegInt result;
+	volatile RTOS_Task *thisTask;
+	RTOS_RegInt status;
 	RTOS_SavedCriticalState(saved_state);
+
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != semaphore);
 #endif
@@ -698,24 +729,32 @@ RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
         	return (0 == timeout) ?  RTOS_TIMED_OUT : RTOS_ERROR_OPERATION_NOT_PERMITTED;
     	}
 
+	thisTask = RTOS_CURRENT_TASK();
+
 	if (0 == timeout)
 	{
-		RTOS.CurrentTask->Status = RTOS_TASK_STATUS_ACTIVE;
+		thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
     		RTOS_ExitCriticalSection(saved_state);
     		return RTOS_TIMED_OUT;
 	}
  
-    	rtos_WaitForEvent(&(semaphore->Event), RTOS.CurrentTask, timeout);
+    	rtos_WaitForEvent(&(semaphore->Event), thisTask, timeout);
+
     	RTOS_ExitCriticalSection(saved_state);
+
     	RTOS_INVOKE_SCHEDULER();
+
     	RTOS_EnterCriticalSection(saved_state);
+
+	status = thisTask->Status;
+
 #if defined(RTOS_INCLUDE_WAKEUP)
-    	result = (RTOS_TASK_STATUS_TIMED_OUT == RTOS.CurrentTask->Status) ? RTOS_TIMED_OUT : 
-						((RTOS_TASK_STATUS_AWAKENED == RTOS.CurrentTask->Status) ? RTOS_ABORTED : RTOS_OK);
+    	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : ((RTOS_TASK_STATUS_AWAKENED == status) ? RTOS_ABORTED : RTOS_OK);
 #else
-    	result = (RTOS_TASK_STATUS_TIMED_OUT == RTOS.CurrentTask->Status) ? RTOS_TIMED_OUT : RTOS_OK;
+    	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : RTOS_OK;
 #endif
-	RTOS.CurrentTask->Status = RTOS_TASK_STATUS_ACTIVE;
+
+	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
     	RTOS_ExitCriticalSection(saved_state);
 	return result;
 }
@@ -1124,7 +1163,10 @@ static void rtos_TimerTickFunction(void)
 #if defined(RTOS_USE_TIMER_TASK)
 void RTOS_DefaultTimerFunction(void *p)
 {
+	volatile RTOS_Task *thisTask;
 	RTOS_RegInt res;
+
+	thisTask = RTOS_CURRENT_TASK();
 
 	while(1)
 	{
@@ -1132,7 +1174,7 @@ void RTOS_DefaultTimerFunction(void *p)
 #if defined(RTOS_TIMER_EXTRA_ACTION)
 		RTOS_TIMER_EXTRA_ACTION();
 #endif
-		res = RTOS_SuspendTask(RTOS.CurrentTask);
+		res = RTOS_SuspendTask(thisTask);
 	}
 	(void)p;
 }
@@ -1142,6 +1184,7 @@ void rtos_TimerTick(void)
 	RTOS_Task *task;
 
  	task = RTOS.TaskList[RTOS_Priority_Timer];
+
 	if (0 != task)
 	{
 		RTOS_ResumeTask(task);
@@ -1152,7 +1195,7 @@ void rtos_TimerTick(void)
 void rtos_TimerTick(void)
 {
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared(RTOS.CurrentTask);
+	rtos_ManageTimeshared(RTOS_CURRENT_TASK());
 #endif
 	rtos_TimerTickFunction();
 }
