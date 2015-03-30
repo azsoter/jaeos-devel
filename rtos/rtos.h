@@ -40,6 +40,26 @@ extern "C" {
 #error RTOS_Priority_Highest must be >= 0.
 #endif
 
+#if defined(RTOS_SMP)
+#	warning You have enabled SMP -- SMP is still an experimental feature.
+#	if !defined(RTOS_SMP_CPU_CORES)
+#		error RTOS_SMP_CPU_CORES must be defined if SMP support is enabled.
+#	endif
+
+#	if (RTOS_SMP_CPU_CORES) < 1
+#		error RTOS_SMP_CPU_CORES must be >= 1.
+#	endif
+
+#	if defined(RTOS_SUPPORT_TIMESHARE)
+
+#		if !defined(RTOS_TIMESHARE_PARALLEL_MAX)
+#			define RTOS_TIMESHARE_PARALLEL_MAX (RTOS_SMP_CPU_CORES)
+#		endif
+
+#	endif
+
+#endif
+
 #if defined(RTOS_USE_TIMER_TASK)
 #if !defined(RTOS_Priority_Timer)
 #error If a timer task is to be used RTOS_Priority_Timer must be defined in the application config header.
@@ -122,24 +142,39 @@ typedef struct RTOS_Task_DLLink RTOS_Task_DLLink;
  
 extern RTOS_OS RTOS;
 
-// Struture to hold the system wide state of the operating system.
+// Structure to hold the system wide state of the operating system.
 struct RTOS_OS
 {
-	RTOS_Task     		*CurrentTask;				// The currently running task.
-	RTOS_RegUInt   		InterruptNesting;			// Level of interrupts nested.
-#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
-	RTOS_RegUInt		SchedulerLocked;			// Is the scheduler locked.
+
+#if defined(RTOS_SMP)
+	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];		// The currently running task on each CPU.
+	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];	// Level of interrupts nested.
+	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 		// Tasks allowed to run on this particular core.
+	RTOS_CpuMutex		OSLock;									// Global lock to prevent access of OS structures from other CPUs.
+	RTOS_TaskSet    	RunningTasks;							// Tasks that are currently running on any CPU.
+	RTOS_CpuMask		Cpus;									// A bitmap of all CPUs.
+	RTOS_CpuMask		CpuHoldingPen;							// CPUs in a 'holding pen' (CPU's not running any task).
+#else
+	RTOS_Task     		*CurrentTask;							// The currently running task.
+	RTOS_RegUInt   		InterruptNesting;						// Level of interrupts nested.
 #endif
-	RTOS_RegInt		IsRunning;				// Is the OS running?
-	RTOS_Time		Time;					// System time in ticks.
-	RTOS_TaskSet    	ReadyToRunTasks;			// Tasks that are ready to run.
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+	RTOS_RegUInt		SchedulerLocked;						// Is the scheduler locked.
+#endif
+	RTOS_RegInt			IsRunning;								// Is the OS running?
+	RTOS_Time			Time;									// System time in ticks.
+	RTOS_TaskSet    	ReadyToRunTasks;						// Tasks that are ready to run.
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-	RTOS_TaskSet		SuspendedTasks;				// Suspended tasks.
+	RTOS_TaskSet		SuspendedTasks;							// Suspended tasks.
 #endif
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	RTOS_TaskSet		TimeshareTasks;				// Tasks subject to time share scheduling.
-	RTOS_TaskSet		PreemptedTasks;				// Tasks preemted because their time slice has expired.
+	RTOS_TaskSet		TimeshareTasks;							// Tasks subject to time share scheduling.
+	RTOS_TaskSet		PreemptedTasks;							// Tasks preempted because their time slice has expired.
 	RTOS_Task_DLList	PreemptedList;
+#if defined(RTOS_SMP)
+	RTOS_CpuMask		TimeShareCpus;							// CPUs running timeshare tasks.
+	RTOS_RegUInt		TimeshareParallelAllowed;				// The number of time share tasks allowed to run at the same time on different CPUs.
+#endif
 #endif
 	RTOS_Task     		*TaskList[(RTOS_Priority_Highest) + 1];	// A list (really an array) of pointers to all the task structures.
 #if defined(RTOS_SUPPORT_SLEEP)
@@ -147,9 +182,13 @@ struct RTOS_OS
 #endif
 };
 
+#if defined(RTOS_SMP)
+#define RTOS_CURRENT_TASK() RTOS.CurrentTasks[RTOS_CurrentCpu()]
+extern RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus);
+#else
 #define RTOS_CURRENT_TASK() RTOS.CurrentTask
+#endif
 
-#define RTOS_IsInsideIsr() (0 != RTOS.InterruptNesting)
 
 extern RTOS_Time RTOS_GetTime(void);
 // extern void RTOS_SetTime(RTOS_Time time);
@@ -212,6 +251,9 @@ struct RTOS_Task
 	RTOS_Task_DLLink	FcfsLists[RTOS_LIST_WHICH_COUNT];
 	RTOS_RegInt		IsTimeshared;			// Is this task time sliced.
 #endif
+#if defined(RTOS_SMP)
+	RTOS_CpuId		Cpu;				// The CPU the task is running on.
+#endif
 	RTOS_RegInt		Status;				// Task's internal status.
 #if defined(RTOS_TARGET_SPECIFIC_TASK_DATA)
 RTOS_TARGET_SPECIFIC_TASK_DATA 
@@ -226,12 +268,22 @@ RTOS_TARGET_SPECIFIC_TASK_DATA
 
 #include <rtos_target.h>
 
+#if !defined(RTOS_IsInsideIsr)
+#if defined(RTOS_SMP)
+// This definition does not always work. For multi-core operation define something more reliable in the actual target specific code.
+#define RTOS_IsInsideIsr() (0 != RTOS.InterruptNesting[RTOS_CurrentCpu()])
+#else
+#define RTOS_IsInsideIsr() (0 != RTOS.InterruptNesting)
+#endif
+#endif
+
 #if !defined(RTOS_TICKS_PER_SECOND)
 #define RTOS_TICKS_PER_SECOND 100	/* Some reasonable default. */
 #endif
 
-#define RTOS_MS_TO_TICKS(MS) (((RTOS_TICKS_PER_SECOND) * (MS)) / 1000)
-#define RTOS_TICKS_TO_MS(TICKS) ((1000 * (TICKS)) / (RTOS_TICKS_PER_SECOND))
+// Always rund up.
+#define RTOS_MS_TO_TICKS(MS) ((999 + ((RTOS_TICKS_PER_SECOND) * (MS))) / 1000)
+#define RTOS_TICKS_TO_MS(TICKS) (((1000 * (TICKS)) + (RTOS_TICKS_PER_SECOND) - 1) / (RTOS_TICKS_PER_SECOND))
 
 // This function should be called either during initialization (before the OS is running)
 // or from inside a critical section.

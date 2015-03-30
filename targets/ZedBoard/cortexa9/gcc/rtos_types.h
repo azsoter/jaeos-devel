@@ -1,7 +1,7 @@
 #ifndef RTOS_TYPES_H
 #define RTOS_TYPES_H
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -46,13 +46,22 @@ typedef struct rtos_StackFrame rtos_StackFrame;
 #	define RTOS_TASKSET_TYPE uint64_t
 #	define RTOS_HIGHEST_SUPPORTED_TASK_PRIORITY 63
 #	define RTOS_FIND_HIGHEST(X) (63 - __builtin_clzll((uint64_t)(X)))
+#		define RTOS_TaskSet_NumberOfMembers(X) __builtin_popcountll((uint64_t)(X))
 #else
-#	if !defined( RTOS_FIND_HIGHEST)
+#	if !defined(RTOS_FIND_HIGHEST)
 #		define RTOS_FIND_HIGHEST(X) (31 - rtos_CLZ(X))
+#		define RTOS_TaskSet_NumberOfMembers(X) __builtin_popcountl(X)
 #	endif
 #endif
 
 #define RTOS_MIN_STACK_SIZE 512 /* What is the real number? */
+
+#if defined(RTOS_SMP)
+typedef uint32_t RTOS_CpuId;
+#define RTOS_CPUID_NO_CPU ((RTOS_CpuId)(-1))
+typedef uint32_t RTOS_CpuMutex;
+typedef uint32_t RTOS_CpuMask;
+#endif
 
 #endif
 

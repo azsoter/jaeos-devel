@@ -35,6 +35,7 @@ extern "C" {
 #define RTOS_TaskSet_IsMember(S,I) ( 0 != (S & (((RTOS_TaskSet)1) << (I))))
 #define RTOS_TaskSet_Intersection(S1, S2) ((S1) & (S2))
 #define RTOS_TaskSet_Union(S1, S2) ((S1) | (S2))
+#define RTOS_TaskSet_Difference(S1, S2) ((S1) & (~(S2))) /* Set-theoric difference AKA Relative Complement. */
 #endif
 
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
@@ -49,7 +50,11 @@ extern void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapaci
 // Initialization.
 extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(), void *param);
 
-#define RTOS_SET_CURRENT_TASK(TASK) RTOS.CurrentTask = (TASK)
+#define RTOS_SET_CURRENT_TASK(TASK) RTOS_CURRENT_TASK() = (TASK)
+
+#if defined(RTOS_SMP)
+#define rtos_IsCpuInsideIsr(CPU) (0 != RTOS.InterruptNesting[(CPU)])
+#endif
 
 // These should only be called by the target port or other OS components.
 extern void rtos_TimerTick(void);
@@ -68,8 +73,10 @@ extern void rtos_SchedulePeer(void);
 extern void rtos_DeductTick(RTOS_Task *task);
 // extern RTOS_RegInt rtos_AdjustTimeSlice(void);
 // extern void rtos_AdjustRemainingTimeSlice(RTOS_Task *task);
-extern void rtos_ManageTimeshared(RTOS_Task *task);
+extern void rtos_ManageTimeshared(void);
 #endif
+
+extern void rtos_PrepareToStart(void);
 
 #ifdef __cplusplus
 }

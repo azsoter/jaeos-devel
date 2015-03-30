@@ -157,12 +157,11 @@ void rtos_SchedulePeer(void)
 	RTOS_TaskSet peersRunning;
 	peersRunning = RTOS_TaskSet_Intersection(RTOS.ReadyToRunTasks, RTOS.TimeshareTasks);
 
-	if (RTOS_SchedulerIsLocked())
-	{
-		return;
-	}
-
+#if defined(RTOS_SMP)
+	if (RTOS_TaskSet_NumberOfMembers(peersRunning) < RTOS.TimeshareParallelAllowed)
+#else
 	if (RTOS_TaskSet_IsEmpty(peersRunning))
+#endif
 	{
 		task = rtos_RemoveFirstTaskFromDList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED);
 		if (0 != task)
@@ -206,8 +205,10 @@ void rtos_DeductTick(RTOS_Task *task)
 	}
 }
 
-void rtos_ManageTimeshared(RTOS_Task *task)
+void rtos_ManageTimeshared(void)
 {
+	RTOS_Task *task = RTOS_CURRENT_TASK();
+
 	if (task->IsTimeshared)
 	{
 		if (task->TimeWatermark != RTOS.Time)
@@ -217,6 +218,11 @@ void rtos_ManageTimeshared(RTOS_Task *task)
 
 		if (0 == task->TicksToRun)
 		{
+			if (RTOS_SchedulerIsLocked())
+			{
+				return;
+			}
+
 			rtos_PreemptTask(task);
 			rtos_SchedulePeer();
 		}

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,10 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 #include <board.h>
+
+#if defined(RTOS_SMP)
+#error This target does not support SMP/multicore configurations.
+#endif
 
 #if defined(RTOS_THUMB_SUPPORT)
 #if defined(__thumb__)
@@ -88,6 +92,8 @@ void rtos_DispatchScheduler(void)
 	uint32_t code;
 	uint32_t spsr = ((rtos_StackFrame *)(RTOS_CURRENT_TASK()->SP))->spsr;
 
+	RTOS.InterruptNesting++;
+
 	if (0 == (0x20 & spsr))
 	{
 		code = *(uint32_t *)(((rtos_StackFrame *)(RTOS_CURRENT_TASK()->SP))->regs[15] - 8); // The SWI instruction.
@@ -110,6 +116,9 @@ void rtos_DispatchScheduler(void)
 		default:
 			break;
 	}
+
+	RTOS.InterruptNesting--;
+
 }
 
 void rtos_Invoke_Scheduler(void) __attribute__((interrupt("SWI"), naked));
