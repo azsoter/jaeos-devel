@@ -166,6 +166,51 @@ RTOS_RegInt volatile rtos_UnlockCpuMutex(volatile RTOS_CpuMutex *lock)
 	return RTOS_OK;
 }
 
+// Enter critical section on an SMP setup.
+// It acquires the lock with interrupts disabled, but if the lock is busy it waits (WFE) with interrupts enabled.
+// This is to allow the thread to be interrupted even while waiting to lock the OS to enter a critical section.
+RTOS_Critical_State rtos_ARM_SMP_EnterCriticalSection(volatile RTOS_CpuMutex *lock)
+{
+	RTOS_Critical_State saved;
+	RTOS_Critical_State interrupts_off;
+	RTOS_CpuId cpu;
+	uint32_t id;
+	uint32_t lock_val;
+	uint32_t success;
+	__asm__ __volatile__ ("\tMRS\t%0, CPSR" : "=r" (saved) : :);
+
+	if (0 == (0x80 & saved)) // Interrupts were enabled, we were not in a critical section.
+	{
+		interrupts_off = saved | 0xC0;
+
+		while (1)
+		{
+			__asm__ __volatile__ ("\tMSR\tCPSR, %0" : : "r" (interrupts_off) :);            // Disable Interrupts.
+			__asm__ __volatile__("DSB");
+			__asm__ __volatile__("LDREX %0,[%1]" : "=r" (lock_val) : "r" (lock) :);
+
+			if (0 == lock_val)
+			{
+				cpu = RTOS_CurrentCpu();
+				id = (LOCK_ID_MARKER) | cpu;
+
+				__asm__ __volatile__("STREX %0, %2, [%1]" : "=&r" (success) : "r" (lock) , "r" (id) :);
+
+				if (0 == success)
+				{
+					__asm__ __volatile__("DMB");
+					break;
+				}
+			}
+
+			__asm__ __volatile__ ("\tMSR\tCPSR, %0" : : "r" (saved) :);                   // Temporarily reenable interrupts.
+			__asm__ __volatile__("WFE");
+		}
+
+	}
+	return saved;
+}
+
 #define RTOS_RESTORE_CONTEXT()	\
 { \
 	__asm__ volatile ("LDR		R0, =RTOS");		/* The address of the RTOS structure.*/ 	\

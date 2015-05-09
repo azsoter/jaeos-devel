@@ -61,8 +61,16 @@ extern RTOS_RegInt volatile rtos_UnlockCpuMutex(volatile RTOS_CpuMutex *lock);
 // #define RTOS_OS_LOCK  ((volatile RTOS_CpuMutex *)&(RTOS.OSLock))
 // #define RTOS_OS_LOCK ((volatile unsigned long *)(0xFFFF0004))
 
+#if 1
+extern RTOS_Critical_State rtos_ARM_SMP_EnterCriticalSection(volatile RTOS_CpuMutex *lock);
+
+#define RTOS_EnterCriticalSection(X) (X) = rtos_ARM_SMP_EnterCriticalSection(RTOS_OS_LOCK)
+
+#else
 #define RTOS_EnterCriticalSection(X) \
 		do { rtos_disableInterrupts(X); if (0 == (0x80 & (X))) rtos_LockCpuMutex(RTOS_OS_LOCK); } while(0)
+#endif
+
 #define RTOS_ExitCriticalSection(X)	\
 	do { if (0 == (0x80 & (X))) rtos_UnlockCpuMutex(RTOS_OS_LOCK); rtos_restoreInterrupts(X); } while(0)
 #else
