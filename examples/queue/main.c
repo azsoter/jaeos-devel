@@ -56,7 +56,7 @@ void Consumer(void *p)
 	// PrintHex(res);
 	if (RTOS_OK == res)
 	{
-		Board_Puts(RTOS_GetTaskName(RTOS_CURRENT_TASK()));
+		Board_Puts(RTOS_GetTaskName(RTOS_GetCurrentTask()));
 		Board_Putc(':');
 		PrintHex((uint32_t)goodie);
 		Board_Putc('\r');
@@ -74,7 +74,7 @@ void Producer(void *p)
     while(1) 
     {
 	stuff++;
-	Board_Puts(RTOS_GetTaskName(RTOS_CURRENT_TASK()));
+	Board_Puts(RTOS_GetTaskName(RTOS_GetCurrentTask()));
 	Board_Putc(':');
 	PrintHex(stuff);
 	Board_Putc('\r');

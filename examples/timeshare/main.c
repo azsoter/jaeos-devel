@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ void f(void *p)
 
     while(1) 
     {
-	Board_Putc(RTOS_CURRENT_TASK()->TaskName[1]);
+	Board_Putc(RTOS_GetCurrentTask()->TaskName[1]);
 	dly(50000);
     }
     (void)p;
