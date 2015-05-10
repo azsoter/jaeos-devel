@@ -50,10 +50,13 @@ extern void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapaci
 // Initialization.
 extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(), void *param);
 
-#define RTOS_SET_CURRENT_TASK(TASK) RTOS_CURRENT_TASK() = (TASK)
+
 
 #if defined(RTOS_SMP)
+#define RTOS_CURRENT_TASK() RTOS.CurrentTasks[RTOS_CurrentCpu()]
 #define rtos_IsCpuInsideIsr(CPU) (0 != RTOS.InterruptNesting[(CPU)])
+#else
+#define RTOS_CURRENT_TASK() RTOS.CurrentTask
 #endif
 
 // These should only be called by the target port or other OS components.

@@ -602,6 +602,14 @@ void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity)
 	}
 }
 
+#if !defined(RTOS_SMP)
+// Mostly for debugging to allow experimental compiles when CPU1 initialization is included.
+void rtos_SecondaryCpu(void)
+{
+	RTOS_ASSERT(0); // We shoudl never actually get here.
+}
+#endif
+
 int RTOS_StartMultitasking(void)
 {
 	RTOS_ASSERT(0 != RTOS.TaskList[RTOS_Priority_Idle]);

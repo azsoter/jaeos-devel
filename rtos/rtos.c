@@ -189,6 +189,22 @@ RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus)
 }
 #endif
 // -----------------------------------------------------------------------------------
+RTOS_Task *RTOS_GetCurrentTask(void)
+{
+#if defined(RTOS_SMP)
+	RTOS_Task *thisTask;
+	RTOS_SavedCriticalState(saved_state);
+
+	RTOS_EnterCriticalSection(saved_state);
+	thisTask = RTOS_CURRENT_TASK();
+	RTOS_ExitCriticalSection(saved_state);
+
+	return thisTask;
+#else
+	return RTOS.CurrentTask;
+#endif
+}
+
 void rtos_RunTask(void)
 {
 	volatile RTOS_Task *thisTask;
@@ -196,7 +212,7 @@ void rtos_RunTask(void)
 
 	RTOS_SavedCriticalState(saved_state);
 
-	thisTask = RTOS_CURRENT_TASK();
+	thisTask = RTOS_GetCurrentTask();
 
 	// Execute the task's function.
 	thisTask->Action(thisTask->Parameter);
@@ -353,7 +369,7 @@ void rtos_Scheduler(void)
 
 	if (0 != task)
 	{
-		RTOS_SET_CURRENT_TASK(task);
+		RTOS.CurrentTask = task;
 	}
 }
 #endif
@@ -425,7 +441,7 @@ void rtos_SchedulerForYield(void)
 #endif
 		}
 #else
-		RTOS_SET_CURRENT_TASK(task);
+		RTOS.CurrentTask = task;
 #endif
 	}
 }
@@ -506,7 +522,7 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 	volatile RTOS_Task *thisTask;
 	RTOS_SavedCriticalState(saved_state);
 
-	thisTask = RTOS_CURRENT_TASK();
+	thisTask = RTOS_GetCurrentTask();
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(!RTOS_IsInsideIsr());
@@ -1255,9 +1271,12 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 #if defined(RTOS_INCLUDE_CHANGEPRIORITY)
 RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriority)
 {
-	int i;
+
 	RTOS_TaskPriority oldPriority;
 	RTOS_RegInt result = RTOS_OK;
+#if defined(RTOS_SMP)
+	int i;
+#endif
 
 	RTOS_SavedCriticalState(saved_state);
 
@@ -1417,7 +1436,7 @@ void RTOS_DefaultTimerFunction(void *p)
 	volatile RTOS_Task *thisTask;
 	RTOS_RegInt res;
 
-	thisTask = RTOS_CURRENT_TASK();
+	thisTask = RTOS_GetCurrentTask();
 
 	while(1)
 	{

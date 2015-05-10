@@ -183,12 +183,10 @@ struct RTOS_OS
 };
 
 #if defined(RTOS_SMP)
-#define RTOS_CURRENT_TASK() RTOS.CurrentTasks[RTOS_CurrentCpu()]
 extern RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus);
-#else
-#define RTOS_CURRENT_TASK() RTOS.CurrentTask
 #endif
 
+extern RTOS_Task *RTOS_GetCurrentTask(void);
 
 extern RTOS_Time RTOS_GetTime(void);
 // extern void RTOS_SetTime(RTOS_Time time);
