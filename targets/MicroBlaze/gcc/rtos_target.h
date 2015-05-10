@@ -1,7 +1,7 @@
 #ifndef RTOS_TARGET_H
 #define RTOS_TARGET_H
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,8 @@ extern void rtos_InvokeScheduler(void);
 extern void rtos_InvokeYield(void);
 #define RTOS_INVOKE_SCHEDULER() rtos_InvokeScheduler()
 #define RTOS_INVOKE_YIELD() rtos_InvokeYield()
+
+#define RTOS_TASK_EXEC_LOCATION(TASK) ((rtos_StackFrame *)((TASK)->SP))->regs[14]
 
 // Utility functions.
 extern void RTOS_DefaultIdleFunction(void *p);

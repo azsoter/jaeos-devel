@@ -2,7 +2,7 @@
 #define RTOS_TARGET_H
 
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -80,6 +80,8 @@ extern uint32_t rtos_arm_CLZ(uint32_t x);
 // For debugging:
 #define rsp()   ({ unsigned long rtos_tmp;  asm ("MOV\t%0, SP":   "=r" (rtos_tmp)); rtos_tmp; })
 #define rcpsr() ({ unsigned long rtos_tmp;  asm ("MRS\t%0, CPSR": "=r" (rtos_tmp)); rtos_tmp; })
+
+#define RTOS_TASK_EXEC_LOCATION(TASK) ((rtos_StackFrame *)((TASK)->SP))->regs[15]
 
 // Utility functions.
 #define RTOS_DEFAULT_IDLE_FUNCTION RTOS_DefaultIdleFunction

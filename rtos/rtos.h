@@ -192,7 +192,7 @@ extern RTOS_Time RTOS_GetTime(void);
 // extern void RTOS_SetTime(RTOS_Time time);
 
 // Represents an 'event' that a task can wait for.
-// Only used to implement other constructs for syncronization.
+// Only used to implement other constructs for synchronization.
 struct RTOS_EventHandle
 {
 	RTOS_TaskSet    	TasksWaiting;	// The tasks waiting for this event.
