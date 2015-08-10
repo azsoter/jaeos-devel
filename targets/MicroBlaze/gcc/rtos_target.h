@@ -30,14 +30,15 @@
 				"msf r3, rmsr \r\n" \
 				"ori   r3,  r3, 2\r\n" \
 				"mts rmsr, r3 \r\n" \
-							 : : : "r3" )
+				: : : "r3","cc" )
 
 #define rtos_disableInterrupts() ({ RTOS_Critical_State _saved_; \
 		__asm__ volatile (	\
 				"mfs %0, rmsr \r\n" \
 				"andni   r3,  %0, 2\r\n" \
 				"mts rmsr, r3 \r\n" \
-							 : "=r" (_saved_): : "r3"); _saved_; })
+				"bri 4\r\n" /* The documentation is somewhat vague on when exactly interrupts gets disabled, might be after executing one instruction after the MTS. The least we can do is flush the instruction pipeline.*/ \
+				: "=r" (_saved_): : "r3","cc"); _saved_; })
 
 #define rtos_restoreInterrupts(SAVED)	__asm__ volatile ("mts rmsr, %0\n" : : "r" (SAVED) : "cc")
 

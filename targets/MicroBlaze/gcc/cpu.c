@@ -83,7 +83,7 @@ void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity)
 			sp->regs[i] = i;
 		}
 
-	    msr |= mfmsr() | 2;
+	    msr = mfmsr() | 2;
 
 		sp->regs[0] = msr;									// MSR
 		sp->regs[2] = (uint32_t)&_SDA2_BASE_;				// R2
