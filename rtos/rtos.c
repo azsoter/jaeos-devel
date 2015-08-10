@@ -689,7 +689,7 @@ RTOS_INLINE RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 }
 #endif
 
-#if defined(RTOS_INCLUDE_NAKED_EVENTS)
+#if defined(RTOS_INCLUDE_NAKED_EVENTS) || defined(RTOS_INCLUDE_SEMAPHORES)
 RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event)
 {
 	RTOS_SavedCriticalState(saved_state);
@@ -714,7 +714,9 @@ RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event)
 	RTOS_ExitCriticalSection(saved_state);
 	return RTOS_OK;
 }
+#endif
 
+#if defined(RTOS_INCLUDE_NAKED_EVENTS)
 RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 {
 	RTOS_RegInt result;
