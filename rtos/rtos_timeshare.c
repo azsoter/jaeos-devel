@@ -198,35 +198,34 @@ void RTOS_YieldTimeSlice(void)
 
 void rtos_DeductTick(RTOS_Task *task)
 {
-	if ((0 != task->TicksToRun) && ((RTOS_TIMEOUT_FOREVER) != task->TicksToRun))
+	if ((0 != task->TicksToRun) && ((RTOS_TIMEOUT_FOREVER) != task->TicksToRun) && (task->TimeWatermark != RTOS.Time))
 	{
 		task->TicksToRun--;
 		task->TimeWatermark = RTOS.Time;
 	}
 }
 
-void rtos_ManageTimeshared(void)
+void rtos_ManageTimeshared(RTOS_Task *task)
 {
-	RTOS_Task *task = RTOS_CURRENT_TASK();
-
-	if (task->IsTimeshared)
+	if (task)
 	{
-		if (task->TimeWatermark != RTOS.Time)
+		if (task->IsTimeshared)
 		{
 			rtos_DeductTick(task);
-		}
 
-		if (0 == task->TicksToRun)
-		{
-			if (RTOS_SchedulerIsLocked())
+			if (0 == task->TicksToRun)
 			{
-				return;
-			}
+				if (RTOS_SchedulerIsLocked())
+				{
+					return;
+				}
 
-			rtos_PreemptTask(task);
-			rtos_SchedulePeer();
+				rtos_PreemptTask(task);
+			}
 		}
 	}
+
+	rtos_SchedulePeer();
 }
 
 #endif

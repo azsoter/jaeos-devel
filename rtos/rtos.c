@@ -286,22 +286,20 @@ void rtos_Scheduler(void)
 	RTOS_TaskSet runningTasks;
 	RTOS_Task *task;
 
+	cpu = RTOS_CurrentCpu();
+	currentTask = RTOS.CurrentTasks[cpu];
+
+#if defined(RTOS_SUPPORT_TIMESHARE)
+	rtos_ManageTimeshared(currentTask);
+#endif
+
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
 
-	cpu = RTOS_CurrentCpu();
-
-	currentTask = RTOS.CurrentTasks[cpu];
-
 	if (0 != currentTask)
 	{
-
-#if defined(RTOS_SUPPORT_TIMESHARE)
-		rtos_ManageTimeshared();
-#endif
-
 		currentPriority = currentTask->Priority;
 	}
 
@@ -355,14 +353,14 @@ void rtos_Scheduler(void)
 	RTOS_TaskPriority priority;
 	RTOS_Task *task;
 
+#if defined(RTOS_SUPPORT_TIMESHARE)
+	rtos_ManageTimeshared(RTOS.CurrentTask);
+#endif
+
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
-
-#if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared();
-#endif
 
 	priority = RTOS_GetHighestPriorityInSet(RTOS.ReadyToRunTasks);
 	task = rtos_TaskFromPriority(priority);
@@ -382,8 +380,17 @@ void rtos_SchedulerForYield(void)
 	RTOS_Task *task;
 	RTOS_TaskSet tasks;
 	RTOS_TaskSet t;
+	RTOS_Task *currentTask;
 #if defined(RTOS_SMP)
-	RTOS_CpuId cpu;
+	RTOS_TaskSet otherRunningTasks;
+	RTOS_CpuId cpu = RTOS_CurrentCpu();
+	currentTask = RTOS.CurrentTasks[cpu];
+#else
+	currentTask = RTOS.CurrentTask;
+#endif
+
+#if defined(RTOS_SUPPORT_TIMESHARE)
+	rtos_ManageTimeshared(currentTask);
 #endif
 
 	if (RTOS_SchedulerIsLocked())
@@ -391,24 +398,20 @@ void rtos_SchedulerForYield(void)
 		return;
 	}
 
-#if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared();
-#endif
+	currentPriority = currentTask->Priority;
 
+	tasks = RTOS.ReadyToRunTasks;
 
 #if defined(RTOS_SMP)
-	cpu = RTOS_CurrentCpu();
-	currentPriority = RTOS.CurrentTasks[cpu]->Priority;
-	tasks = RTOS_TaskSet_Intersection(RTOS.ReadyToRunTasks, RTOS.TasksAllowed[cpu]);
-	tasks = RTOS_TaskSet_Difference(tasks, RTOS.RunningTasks);	// None of the currently running tasks.
-#else
-	tasks = RTOS.ReadyToRunTasks;
-	currentPriority = RTOS_CURRENT_TASK()->Priority;
-	RTOS_TaskSet_RemoveMember(tasks, currentPriority);			// Not the current task.
+	tasks = RTOS_TaskSet_Intersection(tasks, RTOS.TasksAllowed[cpu]);
+	otherRunningTasks = RTOS.RunningTasks;
+	RTOS_TaskSet_RemoveMember(otherRunningTasks, currentPriority);
+	tasks = RTOS_TaskSet_Difference(tasks, otherRunningTasks);	// Don't pick one of the running tasks (except the one trying to yield()).
 #endif
-	RTOS_TaskSet_RemoveMember(tasks, RTOS_Priority_Idle);		// Not the idle task.
+	t = tasks;
+	RTOS_TaskSet_RemoveMember(t, RTOS_Priority_Idle);		// Not the idle task.
 	
-	t = tasks & ~((~(RTOS_TaskSet)0) << currentPriority);
+	t = t & ~((~(RTOS_TaskSet)0) << currentPriority);		// This makes the assumption that RTOS_TaskSet is some integer type.
 
 	priority = RTOS_GetHighestPriorityInSet(t);
 	task = rtos_TaskFromPriority(priority);
@@ -419,9 +422,9 @@ void rtos_SchedulerForYield(void)
 		task = rtos_TaskFromPriority(priority);
 	}
 
+#if defined(RTOS_SMP)
 	if (0 != task)
 	{
-#if defined(RTOS_SMP)
 		if (task != RTOS.CurrentTasks[cpu])
 		{
 			RTOS_TaskSet_RemoveMember(RTOS.RunningTasks, currentPriority);
@@ -430,20 +433,29 @@ void rtos_SchedulerForYield(void)
 			task->Cpu = cpu;
 			RTOS_TaskSet_AddMember(RTOS.RunningTasks, priority);
 #if defined(RTOS_SUPPORT_TIMESHARE)
-		if (task->IsTimeshared)
-		{
-			RTOS.TimeShareCpus = RTOS_CpuMask_AddCpu(RTOS.TimeShareCpus, cpu);
-		}
-		else
-		{
-			RTOS.TimeShareCpus = RTOS_CpuMask_RemoveCpu(RTOS.TimeShareCpus, cpu);
-		}
+			if (task->IsTimeshared)
+			{
+				RTOS.TimeShareCpus = RTOS_CpuMask_AddCpu(RTOS.TimeShareCpus, cpu);
+			}
+			else
+			{
+				RTOS.TimeShareCpus = RTOS_CpuMask_RemoveCpu(RTOS.TimeShareCpus, cpu);
+			}
 #endif
 		}
-#else
-		RTOS.CurrentTask = task;
-#endif
 	}
+	else
+	{
+		RTOS_TaskSet_RemoveMember(RTOS.RunningTasks, currentPriority);
+		RTOS.CurrentTasks[cpu]->Cpu = RTOS_CPUID_NO_CPU;
+		RTOS.CurrentTasks[cpu] = task;	// In SMP configurations it is OK to have a task that is NULL.
+	}
+#else
+	if (0 != task)
+	{
+		RTOS.CurrentTask = task;
+	}
+#endif
 }
 
 void RTOS_YieldPriority(void)
@@ -561,7 +573,6 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 	{
 		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Previous = 0;
 		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Next = 0;
-		rtos_SchedulePeer();
 	}
 #endif
 	rtos_AddToSleepers(thisTask);
@@ -608,16 +619,6 @@ RTOS_INLINE void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTO
 
         RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
 	task->Status = RTOS_TASK_STATUS_WAITING;
-
-#if defined(RTOS_SUPPORT_TIMESHARE)
-	if (task->IsTimeshared)
-	{
-		// We have just unscheduled a task that uses time slices.
-		// If there are others that are not running because their time slice has expired
-		// now we can pick another one to use the CPU.
-		rtos_SchedulePeer();
-	}
-#endif
 
         if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
         {
@@ -764,15 +765,15 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 
 	status = thisTask->Status;
 	
+	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
+
+    	RTOS_ExitCriticalSection(saved_state);
+
 #if defined( RTOS_INCLUDE_WAKEUP)
     	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : ((RTOS_TASK_STATUS_AWAKENED == status) ? RTOS_ABORTED : RTOS_OK);
 #else
     	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : RTOS_OK;
 #endif
-
-	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-
-    	RTOS_ExitCriticalSection(saved_state);
 
 	return result;
 }
@@ -928,14 +929,16 @@ RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
 
 	status = thisTask->Status;
 
+	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
+
+    	RTOS_ExitCriticalSection(saved_state);
+
 #if defined(RTOS_INCLUDE_WAKEUP)
     	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : ((RTOS_TASK_STATUS_AWAKENED == status) ? RTOS_ABORTED : RTOS_OK);
 #else
     	result = (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : RTOS_OK;
 #endif
 
-	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-    	RTOS_ExitCriticalSection(saved_state);
 	return result;
 }
 
@@ -1466,9 +1469,6 @@ void rtos_TimerTick(void)
 #else
 void rtos_TimerTick(void)
 {
-#if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_ManageTimeshared();
-#endif
 	rtos_TimerTickFunction();
 
 #if defined(RTOS_SMP)

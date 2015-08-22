@@ -74,9 +74,7 @@ extern RTOS_Task *rtos_RemoveFirstTaskFromDList(volatile RTOS_Task_DLList *list,
 extern void rtos_PreemptTask(RTOS_Task *task);
 extern void rtos_SchedulePeer(void);
 extern void rtos_DeductTick(RTOS_Task *task);
-// extern RTOS_RegInt rtos_AdjustTimeSlice(void);
-// extern void rtos_AdjustRemainingTimeSlice(RTOS_Task *task);
-extern void rtos_ManageTimeshared(void);
+extern void rtos_ManageTimeshared(RTOS_Task *task);
 #endif
 
 extern void rtos_PrepareToStart(void);
