@@ -42,6 +42,11 @@ extern "C" {
 
 #if defined(RTOS_SMP)
 #	warning You have enabled SMP -- SMP is still an experimental feature.
+
+#	if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+#	error Scheduler Lock is not supported in SMP mode.
+#	endif
+
 #	if !defined(RTOS_SMP_CPU_CORES)
 #		error RTOS_SMP_CPU_CORES must be defined if SMP support is enabled.
 #	endif
@@ -147,10 +152,10 @@ struct RTOS_OS
 {
 
 #if defined(RTOS_SMP)
-	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];		// The currently running task on each CPU.
-	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];	// Level of interrupts nested.
-	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 		// Tasks allowed to run on this particular core.
-	RTOS_CpuMutex		OSLock;									// Global lock to prevent access of OS structures from other CPUs.
+	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];				// The currently running task on each CPU.
+	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];				// Level of interrupts nested.
+	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 				// Tasks allowed to run on this particular core.
+	RTOS_CpuMutex		OSLock;								// Global lock to prevent access of OS structures from other CPUs.
 	RTOS_TaskSet    	RunningTasks;							// Tasks that are currently running on any CPU.
 	RTOS_CpuMask		Cpus;									// A bitmap of all CPUs.
 	RTOS_CpuMask		CpuHoldingPen;							// CPUs in a 'holding pen' (CPU's not running any task).
@@ -161,8 +166,8 @@ struct RTOS_OS
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	RTOS_RegUInt		SchedulerLocked;						// Is the scheduler locked.
 #endif
-	RTOS_RegInt			IsRunning;								// Is the OS running?
-	RTOS_Time			Time;									// System time in ticks.
+	RTOS_RegInt		IsRunning;							// Is the OS running?
+	RTOS_Time		Time;								// System time in ticks.
 	RTOS_TaskSet    	ReadyToRunTasks;						// Tasks that are ready to run.
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 	RTOS_TaskSet		SuspendedTasks;							// Suspended tasks.
@@ -173,7 +178,7 @@ struct RTOS_OS
 	RTOS_Task_DLList	PreemptedList;
 #if defined(RTOS_SMP)
 	RTOS_CpuMask		TimeShareCpus;							// CPUs running timeshare tasks.
-	RTOS_RegUInt		TimeshareParallelAllowed;				// The number of time share tasks allowed to run at the same time on different CPUs.
+	RTOS_RegUInt		TimeshareParallelAllowed;			// The number of time share tasks allowed to run at the same time on different CPUs.
 #endif
 #endif
 	RTOS_Task     		*TaskList[(RTOS_Priority_Highest) + 1];	// A list (really an array) of pointers to all the task structures.
@@ -301,8 +306,8 @@ extern void RTOS_SetTaskName(RTOS_Task *task, const char *name);
 #endif
 
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
-extern void RTOS_LockScheduler(void);
-extern void RTOS_UnlockScheduler(void);
+extern RTOS_RegInt RTOS_LockScheduler(void);
+extern RTOS_RegInt RTOS_UnlockScheduler(void);
 #endif
 
 #if defined(RTOS_INCLUDE_DELAY)

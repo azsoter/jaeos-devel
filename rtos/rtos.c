@@ -293,10 +293,12 @@ void rtos_Scheduler(void)
 	rtos_ManageTimeshared(currentTask);
 #endif
 
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
+#endif
 
 	if (0 != currentTask)
 	{
@@ -357,11 +359,12 @@ void rtos_Scheduler(void)
 	rtos_ManageTimeshared(RTOS.CurrentTask);
 #endif
 
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
-
+#endif
 	priority = RTOS_GetHighestPriorityInSet(RTOS.ReadyToRunTasks);
 	task = rtos_TaskFromPriority(priority);
 
@@ -393,11 +396,12 @@ void rtos_SchedulerForYield(void)
 	rtos_ManageTimeshared(currentTask);
 #endif
 
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
-
+#endif
 	currentPriority = currentTask->Priority;
 
 	tasks = RTOS.ReadyToRunTasks;
@@ -468,25 +472,51 @@ void RTOS_YieldPriority(void)
 #endif
 
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
-void RTOS_LockScheduler(void)
+RTOS_RegInt RTOS_LockScheduler(void)
 {
 	RTOS_SavedCriticalState(saved_state);
+
+	if (RTOS_IsInsideIsr())
+	{
+		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
 
 	RTOS_EnterCriticalSection(saved_state);
 	RTOS.SchedulerLocked++;
 	RTOS_ExitCriticalSection(saved_state);
+
+	return RTOS_OK;
 }
 
-void RTOS_UnlockScheduler(void)
+RTOS_RegInt RTOS_UnlockScheduler(void)
 {
 	RTOS_SavedCriticalState(saved_state);
 
+	if (RTOS_IsInsideIsr())
+	{
+		return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
+
 	RTOS_EnterCriticalSection(saved_state);
-	if (0 != RTOS.SchedulerLocked)
+
+	if (0 == RTOS.SchedulerLocked)
+	{
+		RTOS_ExitCriticalSection(saved_state);
+		return RTOS_ERROR_FAILED;
+	}
+	else
 	{
 		RTOS.SchedulerLocked--;
 	}
+
 	RTOS_ExitCriticalSection(saved_state);
+
+	if (0 == RTOS.SchedulerLocked)
+	{
+    		RTOS_INVOKE_SCHEDULER();
+	}
+	
+	return RTOS_OK;
 }
 #endif
 
@@ -1058,6 +1088,9 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 	RTOS_RegInt result = RTOS_ERROR_FAILED;
 	RTOS_TaskPriority priority;
 	RTOS_SavedCriticalState(saved_state);
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+	RTOS_Task *currentTask;
+#endif
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != task);
 #endif
@@ -1070,6 +1103,21 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 #endif
 
 	RTOS_EnterCriticalSection(saved_state);
+
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+#	if defined(RTOS_SMP)
+	currentTask = RTOS.CurrentTasks[RTOS_CurrentCpu()];
+#	else
+	currentTask = RTOS.CurrentTask;
+#	endif
+
+    	if ((RTOS_SchedulerIsLocked()) && (task == currentTask))
+	{
+		// Cannot Suspend the current task is the scheduler is locked.
+		RTOS_ExitCriticalSection(saved_state);
+		return RTOS_ERROR_FAILED;
+	}
+#endif
 
 #if defined(RTOS_SUPPORT_SLEEP)
 	if ((RTOS_TASK_STATUS_WAITING == task->Status) || (RTOS_TASK_STATUS_SLEEPING == task->Status))
@@ -1093,6 +1141,7 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 	{
 		if (RTOS_OK != rtos_TaskForceInterrupted(task))
 		{
+			RTOS_ExitCriticalSection(saved_state);
 			return RTOS_ERROR_FAILED;
 		}
 	}
@@ -1119,10 +1168,10 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 
 	RTOS_ExitCriticalSection(saved_state);
 
-    if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
-    {
-    	RTOS_INVOKE_SCHEDULER();
-    }
+    	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
+    	{
+    		RTOS_INVOKE_SCHEDULER();
+    	}
 
 	return result;
 }
@@ -1172,6 +1221,9 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 {
 	RTOS_RegInt result = RTOS_ERROR_FAILED;
 	RTOS_TaskPriority priority;
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+	RTOS_Task *currentTask;
+#endif
 #if defined(RTOS_SMP)
 	int i;
 #endif
@@ -1194,6 +1246,21 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 
 	RTOS_EnterCriticalSection(saved_state);
 
+#if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
+#	if defined(RTOS_SMP)
+	currentTask = RTOS.CurrentTasks[RTOS_CurrentCpu()];
+#	else
+	currentTask = RTOS.CurrentTask;
+#	endif
+
+    	if ((RTOS_SchedulerIsLocked()) && (task == currentTask))
+	{
+		// Cannot Kill the current task is the scheduler is locked.
+		RTOS_ExitCriticalSection(saved_state);
+		return RTOS_ERROR_FAILED;
+	}
+#endif
+
 #if defined(RTOS_SUPPORT_SLEEP)
 	if ((RTOS_TASK_STATUS_WAITING == task->Status) || (RTOS_TASK_STATUS_SLEEPING == task->Status))
 	{
@@ -1208,14 +1275,6 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 
 	priority = task->Priority;
 
-#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-	if (RTOS_TaskSet_IsMember(RTOS.SuspendedTasks, priority))
-	{
-		RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, priority);
-		result = RTOS_OK;
-	}
-#endif
-
 #if defined(RTOS_SMP)
 	// If the task is running on this CPU it is OK to suspend it, but if it is running on another CPU
 	// We have to make sure to stop executing on its behalf and run the scheduler when we are done.
@@ -1224,8 +1283,17 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 	{
 		if (RTOS_OK != rtos_TaskForceInterrupted(task))
 		{
+			RTOS_ExitCriticalSection(saved_state);
 			return RTOS_ERROR_FAILED;
 		}
+	}
+#endif
+
+#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
+	if (RTOS_TaskSet_IsMember(RTOS.SuspendedTasks, priority))
+	{
+		RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, priority);
+		result = RTOS_OK;
 	}
 #endif
 
@@ -1264,8 +1332,8 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 
 	RTOS_ExitCriticalSection(saved_state);
 
-    if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
-    {
+    	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
+    	{
 		RTOS_INVOKE_SCHEDULER();
 	}
 
