@@ -757,8 +757,6 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != event);
-	RTOS_ASSERT(!RTOS_IsInsideIsr());
-	RTOS_ASSERT(!RTOS_SchedulerIsLocked());
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
@@ -766,7 +764,14 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
+#endif
 
+	if (0 == timeout)
+	{
+		return RTOS_TIMED_OUT;
+	}
+
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
     	if (RTOS_IsInsideIsr())
     	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;

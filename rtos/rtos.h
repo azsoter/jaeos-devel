@@ -320,6 +320,7 @@ extern void RTOS_YieldPriority(void);
 #endif
 
 #if defined(RTOS_INCLUDE_NAKED_EVENTS)
+extern RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event);
 extern RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout);
 extern RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event);
 #endif
