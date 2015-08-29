@@ -243,7 +243,7 @@ void rtos_RunTask(void)
 	RTOS_INVOKE_SCHEDULER();
 	// We truly should never get here.
 	while(1);
-	RTOS_ExitCriticalSection(saved_state); // No reachable, but pacifies GCC.
+	RTOS_ExitCriticalSection(saved_state); // Not reachable, but pacifies GCC.
 }
 
 #if defined(RTOS_FIND_HIGHEST)
@@ -757,6 +757,8 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != event);
+	RTOS_ASSERT(((!RTOS_IsInsideIsr()) || (0 == timeout)));
+	RTOS_ASSERT(((!RTOS_SchedulerIsLocked()) || (0 == timeout)));
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
@@ -1556,3 +1558,20 @@ void rtos_PrepareToStart(void)
 	RTOS.TimeshareParallelAllowed = (RTOS_TIMESHARE_PARALLEL_MAX);
 #endif
 }
+
+// The default assert function, if the assert fails just hang the system and go to an infinite loop.
+// One will need a debugger to find out what has happened.
+void rtos_DefaultAssert(int cond)
+{
+	RTOS_SavedCriticalState(saved_state);
+
+	if (!cond)
+	{
+		// Make the system dead.
+		RTOS_EnterCriticalSection(saved_state);
+		while(1);
+		RTOS_ExitCriticalSection(saved_state); // Not reachable, but pacifies GCC.
+	}
+
+}
+

@@ -354,7 +354,8 @@ extern RTOS_RegInt RTOS_WakeupTask(RTOS_Task *task);
 #endif
 
 #ifndef RTOS_ASSERT
-#define RTOS_ASSERT(Cond)
+extern void rtos_DefaultAssert(int cond);
+#define RTOS_ASSERT(Cond) rtos_DefaultAssert(Cond)
 #endif
 
 #ifdef __cplusplus
