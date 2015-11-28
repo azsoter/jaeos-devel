@@ -1,0 +1,128 @@
+# Makefile for the x86 32bit multiboot target.
+# Copyright (c) Andras Zsoter 2015.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Usage:
+# make clean ; make EXAMPLE=timeshare
+# make clean ; make EXAMPLE=queue # Default.
+
+BUILD_DIR = build
+DEVICE_DIR = targets/x86/32/multiboot/gcc
+DEVICE_COMMON_DIR = targets/x86/common
+LINKER_SCRIPT = $(DEVICE_DIR)/linker.ld
+TARGETS=$(BUILD_DIR)/jaeos.bin $(BUILD_DIR)/jaeos.list $(BUILD_DIR)/jaeos.syms $(BUILD_DIR)/jaeos.elf $(BUILD_DIR)/jaeos.dis
+EXAMPLES_DIR = examples
+ifndef EXAMPLE
+EXAMPLE = queue
+endif
+
+APP_DIR = $(EXAMPLES_DIR)/$(EXAMPLE)
+
+EXTRA_DIR = extras
+RTOS_DIR = rtos
+
+default:	all
+
+-include $(APP_DIR)/app.src
+SRC += $(EXAMPLES_DIR)/utility.c
+SRC += $(DEVICE_DIR)/interrupts.c
+SRC += $(DEVICE_COMMON_DIR)/us_kbd_map.c
+SRC += $(DEVICE_COMMON_DIR)/kbd.c
+SRC += $(DEVICE_COMMON_DIR)/vga.c
+# SRC +=  miscellaneous/debug/rtos_debug.c
+
+FILES = $(notdir $(SRC) )
+PATHS = $(sort $(dir $(SRC) ) )
+
+OBJ = $(addprefix $(BUILD_DIR)/, $(FILES:.c=.o))
+DEP = $(OBJ:.o=.d)
+
+vpath %.c $(PATHS)
+
+
+# Where your ARM compiler is installed.
+TOOL_BASE = /usr
+
+TOOL_PREFIX = 
+
+CC = $(TOOL_BASE)/bin/$(TOOL_PREFIX)gcc
+OBJCOPY = $(TOOL_BASE)/bin/$(TOOL_PREFIX)objcopy
+OBJDUMP = $(TOOL_BASE)/bin/$(TOOL_PREFIX)objdump
+SIZE = $(TOOL_BASE)/bin/$(TOOL_PREFIX)size
+
+# CFLAGS = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
+
+CFLAGS = --verbose -std=gnu99 -ffreestanding -O2 -mtune=i386 -Wall -Wextra -nostartfiles -nostdlib -g -O2 -I./$(DEVICE_DIR) -I $(RTOS_DIR) -I $(DEVICE_DIR) -I$(DEVICE_COMMON_DIR) -I$(EXTRA_DIR) -I $(APP_DIR)
+LDFLAGS = -Wl,-nostdlib -T $(LINKER_SCRIPT) -lgcc 
+
+all:	$(BUILD_DIR) $(TARGETS)
+	@$(SIZE) $(BUILD_DIR)/jaeos.elf
+
+-include $(DEP)
+
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR)
+
+$(BUILD_DIR)/jaeos.elf:  $(BUILD_DIR)/start.o $(OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ -Wl,--build-id=none,-Map=$(BUILD_DIR)/jaeos.map -nostartfiles $(BUILD_DIR)/start.o $(OBJ)
+
+%.list:%.elf
+	$(OBJDUMP) -D -S  $< > $@
+
+#%.img:%.elf
+#	$(OBJCOPY) $< -O binary $@
+
+%.syms:%.elf
+	$(OBJDUMP) -t $< >$@
+
+%.bin:%.elf
+	cp $< $@
+#	$(OBJCOPY) -S -O binary $< $@
+
+%.dis:%.elf
+	$(OBJDUMP)  -d -g -x $< > $@
+
+$(BUILD_DIR)/start.o: $(DEVICE_DIR)/start.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/cpu.o: $(DEVICE_DIR)/cpu.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/rtos.o: $(RTOS_DIR)/rtos.c
+	$(CC) $(CFLAGS) $(SYS_FLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MM  -MT $@ $< > $(patsubst %.o,%.d,$@)
+
+$(BUILD_DIR)/rtos_timeshare.o: $(RTOS_DIR)/rtos_timeshare.c
+	$(CC) $(CFLAGS) $(SYS_FLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MM  -MT $@ $< > $(patsubst %.o,%.d,$@)
+
+$(BUILD_DIR)/rtos_queue.o: $(EXTRA_DIR)/rtos_queue.c
+	$(CC) $(CFLAGS) $(SYS_FLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MM  -MT $@ $< > $(patsubst %.o,%.d,$@)
+
+# Everything else.
+$(BUILD_DIR)/%.o:%.c
+	$(CC) $(CFLAGS) $(APP_FLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MM  -MT $@ $< > $(patsubst %.o,%.d,$@)
+
+clean:
+	$(RM) -f $(BUILD_DIR)/*
+	$(RM) -f x.x
+

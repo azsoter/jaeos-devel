@@ -1,8 +1,7 @@
-#ifndef UTILITY_H
-#define UTILITY_H
-
+#ifndef INTERRUPTS_H
+#define INTERRUPTS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +23,7 @@
 *
 */
 
-extern void PrintHex(uint32_t x);
-extern void PrintHexNoCr(uint32_t x);
-#endif
+extern void InitInterrupts(void);
+extern void Patch_IDT_Entry(int int_vector, uint32_t handler);
 
+#endif

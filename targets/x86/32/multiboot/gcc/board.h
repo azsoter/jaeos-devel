@@ -1,8 +1,7 @@
-#ifndef UTILITY_H
-#define UTILITY_H
-
+#ifndef BOARD_H
+#define BOARD_H
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +23,11 @@
 *
 */
 
-extern void PrintHex(uint32_t x);
-extern void PrintHexNoCr(uint32_t x);
-#endif
+extern void Board_Putc(char c);
+extern void Board_Puts(const char *s);
+extern char Board_Getc(void);
 
+extern void board_HandleIRQ(void);
+
+extern int Board_HardwareInit(void);
+#endif

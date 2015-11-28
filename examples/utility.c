@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014-2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +28,9 @@
 // Print a number in hex without using any of the libraries.
 // In case during OS or hardware bring up none is available on the target system.
 
+static const char hexDigits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 void PrintHex(uint32_t x)
 {
-	static char hexDigits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 	char buff[11];
 	int i;
 	buff[10] = '\0';
@@ -43,6 +43,22 @@ void PrintHex(uint32_t x)
 	}
 	Board_Puts(buff);
 }
+
+void PrintHexNoCr(uint32_t x)
+{
+	char buff[11];
+	int i;
+	buff[10] = '\0';
+	buff[8] = '\0';
+	buff[9] = '\0';
+	for (i = 0; i < 8; i++)
+	{
+		buff[7-i] = hexDigits[x & 0x0f];
+		x >>= 4;
+	}
+	Board_Puts(buff);
+}
+
 
 // Print some information about what assert has failed.
 // Then just loop in an endless loop.
