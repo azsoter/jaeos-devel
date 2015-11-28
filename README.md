@@ -14,3 +14,5 @@ __Use it at your own peril.__
 
 __A more stable version will be published as soon as things settle down.__
 
+Official Website: http://jaeos.com/
+
