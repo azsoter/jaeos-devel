@@ -44,8 +44,8 @@ void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity)
 		sp->eflags = 0x200;
 		// sp->eflags = 0;
 		sp->cs = 0x10;
-		sp->eip=&rtos_TaskEntryPoint;
-		sp->esp = ((uint32_t) &(sp->eax)) + 4;
+		sp->eip=(RTOS_StackItem_t)(&rtos_TaskEntryPoint);
+		sp->esp = ((RTOS_StackItem_t)(&(sp->eax))) + 4;
 		sp->ebp = sp->esp;
 		sp->eax = 0xaaaaaaaa;
 		sp->ebx = 0xbbbbbbbb;

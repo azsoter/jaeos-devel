@@ -54,10 +54,10 @@ typedef struct rtos_StackFrame rtos_StackFrame;
 #if ((RTOS_Priority_Highest) > 31)
 #	define RTOS_TASKSET_TYPE uint64_t
 #	define RTOS_HIGHEST_SUPPORTED_TASK_PRIORITY 63
-#	define RTOS_FIND_HIGHEST(X) ((0 == (X)) ? ~(uint64_t)0 : (63 - __builtin_clzll((uint64_t)(X))))
+#	define RTOS_FIND_HIGHEST(X) ((0U == (X)) ? ~(RTOS_TaskPriority)0 : (RTOS_TaskPriority)(63 - __builtin_clzll((uint64_t)(X))))
 #else
 #	if !defined( RTOS_FIND_HIGHEST)
-#		define RTOS_FIND_HIGHEST(X) ((0 == (X)) ? ~(uint32_t)0 : (31 - rtos_CLZ(X)))
+#		define RTOS_FIND_HIGHEST(X) ((0U == (X)) ? ~(RTOS_TaskPriority)0 : (RTOS_TaskPriority)(31 - rtos_CLZ(X)))
 #	endif
 #endif
 

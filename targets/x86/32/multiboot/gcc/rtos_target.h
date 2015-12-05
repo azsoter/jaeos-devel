@@ -68,23 +68,6 @@ extern void RTOS_DefaultIdleFunction(void *p);
 
 extern int RTOS_StartMultitasking(void);
 
-// The X86 has separate instruction to access I/O ports (they are typically not memory mapped).
-// Here are some functions to access them.
-
-static __inline__ unsigned char inb(unsigned short int port)
-{
-  unsigned char value;
-
-  __asm__ volatile ("inb %w1,%0":"=a" (value):"Nd" (port));
-  return value;
-}
-
-
-static __inline__ void outb (unsigned char value, unsigned short int port)
-{
-  __asm__ volatile ("outb %b0,%w1": :"a" (value), "Nd" (port));
-}
-
 #if 0
 #define MAGIC_BREAKPOINT() __asm__ volatile ("xchgw %bx, %bx\n"); /* Magic Breakpoint for Bochs. -- http://bochs.sourceforge.net/ */
 #else

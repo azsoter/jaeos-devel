@@ -32,6 +32,8 @@ extern void VGA_SetColor(unsigned char color);
 extern void VGA_PutChar(char c);
 extern void VGA_Puts(const char* data);
 extern void VGA_PrintAt(char c, uint8_t color, uint32_t x, uint32_t y);
+void VGA_MoveCursor(uint32_t x, uint32_t y);
+void VGA_SyncCursor(void);
 extern void VGA_Cls(void);
 
 #endif

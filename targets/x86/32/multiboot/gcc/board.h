@@ -30,4 +30,22 @@ extern char Board_Getc(void);
 extern void board_HandleIRQ(void);
 
 extern int Board_HardwareInit(void);
+
+// The X86 has separate instruction to access I/O ports (they are typically not memory mapped).
+// Here are some functions to access them.
+
+static __inline__ unsigned char inb(unsigned short int port)
+{
+  unsigned char value;
+
+  __asm__ volatile ("inb %w1,%0":"=a" (value):"Nd" (port));
+  return value;
+}
+
+
+static __inline__ void outb (unsigned char value, unsigned short int port)
+{
+  __asm__ volatile ("outb %b0,%w1": :"a" (value), "Nd" (port));
+}
+
 #endif

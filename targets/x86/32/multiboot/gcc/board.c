@@ -27,6 +27,7 @@
 #include <board.h>
 #include <vga.h>
 #include <kbd.h>
+#include <interrupts.h>
 
 void Board_Putc(char c)
 {
@@ -96,6 +97,7 @@ void Board_KeyboardHandler(KBD_Event_t event)
 char Board_Getc(void)
 {
 	char c;
+	VGA_SyncCursor();
 	while (Kbd_BufferHead == Kbd_BufferTail)
 	{
 		__asm__ volatile ("hlt");	// Really there is nothing else to do here, this is supposed to be simple low-level.
@@ -120,7 +122,6 @@ void Board_InitTimer(void)
 // -------------------------------------------------------------------------------------------------
 int Board_HardwareInit(void)
 {
-	RTOS_TaskSet i;
 	RTOS_DisableInterrupts();
 	VGA_Initialize();
 	Board_InitTimer();

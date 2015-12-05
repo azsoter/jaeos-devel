@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <board.h> /* For inb() and outb(). */
 #include "vga.h"
 #define VGA_WIDTH  80
 #define VGA_HEIGHT  25
@@ -27,6 +28,20 @@ static uint16_t VGA_ColoredChar(char c, unsigned char color)
 	return (uint16_t)c | (((uint16_t)color) << 8);
 }
 
+void VGA_MoveCursor(uint32_t x, uint32_t y)
+{
+	uint16_t linear_position = (uint16_t)(((VGA_WIDTH) * y) + x);
+
+	outb(0x0F, 0x3D4);
+	outb((uint8_t)(0xFF & linear_position), 0x3D5);
+	outb(0x0E, 0x3D4);
+	outb((uint8_t)(0xFF & (linear_position >> 8)), 0x3D5);
+}
+
+void VGA_SyncCursor(void)
+{
+	VGA_MoveCursor(column, row);
+}
  
 void VGA_Initialize(void)
 {
@@ -48,6 +63,8 @@ void VGA_Initialize(void)
 			buffer[ix + x] = blank;
 		}
 	}
+
+	VGA_SyncCursor();
 }
 
 void VGA_Cls(void)

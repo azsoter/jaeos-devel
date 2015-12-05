@@ -150,6 +150,8 @@ void Timer_Interrupt_Handler(void)
 
 // extern void Board_KeyboardHandler(KBD_Event_t event);
 
+extern void Board_KeyboardHandler(KBD_Event_t event);
+
 KBD_Event_t KBD_Handler(void)
 {
 	KBD_Event_t event;
@@ -200,12 +202,16 @@ void Kbd_Interrupt_Handler(void)
 void Divide_by_Zero_Handler(void)
 {
 	Board_Puts("Division by Zero@"); PrintHex(RTOS_TASK_EXEC_LOCATION(RTOS.CurrentTask));
-	Board_Puts(RTOS.CurrentTask->TaskName);
+#if defined(RTOS_TASK_NAME_LENGTH)
+	Board_Puts((const char *)(RTOS.CurrentTask->TaskName));
+#else
+	PrintHex((uint32_t)(RTOS.CurrentTask));
+#endif
 	Board_Putc(' ');
 	Board_Putc('I');
 	PrintHex(RTOS.InterruptNesting);
 	MAGIC_BREAKPOINT();
-	for(;;);
+	while(1);
 }
 
 INT_WRAPPER(Timer_Interrupt_Wrapper, Timer_Interrupt_Handler);
