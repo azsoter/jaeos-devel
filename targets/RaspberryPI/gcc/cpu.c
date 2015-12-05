@@ -133,11 +133,8 @@ void rtos_Invoke_Scheduler(void)
 	RTOS_RESTORE_CONTEXT();	
 }
 
-void rtos_Isr_Handler(void) __attribute__((naked));
-
-void rtos_Isr_Handler(void)
+void rtos_HandleIsr(void)
 {
-	RTOS_SAVE_CONTEXT();
 	RTOS.InterruptNesting++;
 #if defined(RTOS_COUNT_CRITICAL_NESTING)
 	RTOS_CURRENT_TASK()->criticalNesting++;
@@ -148,6 +145,14 @@ void rtos_Isr_Handler(void)
 #if defined(RTOS_COUNT_CRITICAL_NESTING)
 	RTOS_CURRENT_TASK()->criticalNesting--;
 #endif
+}
+
+void rtos_Isr_Handler(void) __attribute__((naked));
+
+void rtos_Isr_Handler(void)
+{
+	RTOS_SAVE_CONTEXT();
+	__asm__ volatile("bl rtos_HandleIsr");
 	RTOS_RESTORE_CONTEXT();	
 }
 // -------------------------------------------------------------------------------------------------------------------------------
