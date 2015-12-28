@@ -46,7 +46,8 @@ RTOS_RegInt rtos_CreateTask(RTOS_Task *task, RTOS_TaskPriority priority, void *s
 
 	// sp0 == 0 means that we are initializing a task structure for the 'current thread of execution'.
 	// In that case no stack initialization will be done.
-	if ((0 != sp0) && (RTOS_INITIAL_STACK_DEPTH) >= stackCapacity)
+	// Also check for sufficient stack space. RTOS_INITIAL_STACK_DEPT defined in the target specific rtos_types.h is in bytes.
+	if ((0 != sp0) && (((RTOS_INITIAL_STACK_DEPTH) / sizeof(RTOS_StackItem_t)) >= stackCapacity))
 	{
 		return RTOS_ERROR_FAILED;
 	}
