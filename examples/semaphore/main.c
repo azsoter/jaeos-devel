@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -68,14 +68,9 @@ void low_prio(void *p)
 
 int main()
 {
-    	RTOS_CreateTask(&task_idle, RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-	RTOS_SetTaskName(&task_idle, "Idle");
-
-    	RTOS_CreateTask(&(task[0]),     RTOS_Priority_Task1, stack[0], STACK_SIZE, &low_prio, 0);
-	RTOS_SetTaskName(&(task[0]), "Task1");
-
-    	RTOS_CreateTask(&(task[1]),     RTOS_Priority_Task2, stack[1], STACK_SIZE, &high_prio, 0);
-	RTOS_SetTaskName(&(task[1]), "Task2");
+    	RTOS_CreateTask(&task_idle, "Idle",   RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
+    	RTOS_CreateTask(&(task[0]), "Task1",  RTOS_Priority_Task1, stack[0], STACK_SIZE, &low_prio, 0);
+    	RTOS_CreateTask(&(task[1]), "Task2",  RTOS_Priority_Task2, stack[1], STACK_SIZE, &high_prio, 0);
 
 	RTOS_CreateSemaphore(&s, 0);
 

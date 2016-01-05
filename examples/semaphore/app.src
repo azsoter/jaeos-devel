@@ -1,2 +1,2 @@
-SRC = $(APP_DIR)/main.c $(RTOS_DIR)/rtos.c $(DEVICE_DIR)/cpu.c $(DEVICE_DIR)/board.c 
+SRC = $(APP_DIR)/main.c $(RTOS_DIR)/rtos.c $(RTOS_DIR)/rtos_semaphore.c $(DEVICE_DIR)/cpu.c $(DEVICE_DIR)/board.c 
 

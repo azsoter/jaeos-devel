@@ -2,7 +2,7 @@
 #include <rtos_internals.h>
 
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
 */
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-void rtos_AppendToTaskDList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
+void rtos_AppendToTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
 {
 	if (0 == list->Tail)
 	{
@@ -43,7 +43,7 @@ void rtos_AppendToTaskDList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, 
 	}
 }
 
-void rtos_RemoveFromTaskDList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
+void rtos_RemoveFromTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
 {
 
 	if (task == list->Head)
@@ -70,7 +70,7 @@ void rtos_RemoveFromTaskDList(volatile RTOS_Task_DLList *list, RTOS_RegInt which
 	task->FcfsLists[which].Next = 0;
 }
 
-RTOS_Task *rtos_RemoveFirstTaskFromDList(volatile RTOS_Task_DLList *list, RTOS_RegInt which)
+RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which)
 {
 	RTOS_Task *task = 0;
 
@@ -96,31 +96,34 @@ RTOS_Task *rtos_RemoveFirstTaskFromDList(volatile RTOS_Task_DLList *list, RTOS_R
 
 }
 // ----------
-RTOS_RegInt rtos_MakeTimeshared(RTOS_Task *task, RTOS_Time slice)
+void rtos_MakeTimeshared(RTOS_Task *task, RTOS_Time slice)
 {
 	task->IsTimeshared = 1;
 	task->TicksToRun = slice;
 	task->TimeSliceTicks = slice;
-	RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, task->Priority);
-	return RTOS_OK;
 }
 
 // This function can be called during initialization before the RTOS is fully functional.
-RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(), void *param, RTOS_Time slice)
+RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, const char *name, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param, RTOS_Time slice)
 {
 	RTOS_RegInt result;
 	RTOS_SavedCriticalState(saved_state = 0);
 
+	result = rtos_CreateTask(task, sp0, stackCapacity, f, param);
+#if defined(RTOS_TASK_NAME_LENGTH)
+	RTOS_SetTaskName(task, name);
+#else
+	(void)name;
+#endif
 	if (RTOS.IsRunning)
 	{
 		RTOS_EnterCriticalSection(saved_state);
 	}
 
-	result = RTOS_CreateTask(task, priority, sp0, stackCapacity, f, param);
-
 	if (RTOS_OK == result)
 	{
-		result = rtos_MakeTimeshared(task, slice);
+		rtos_MakeTimeshared(task, slice);
+		result = rtos_RegisterTask(task, priority);
 	}
 
 	if (RTOS.IsRunning)
@@ -145,7 +148,7 @@ void rtos_PreemptTask(RTOS_Task *task)
 		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
 		RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, task->Priority);
 		task->Status |= RTOS_TASK_STATUS_PREEMPTED_FLAG;
-		rtos_AppendToTaskDList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED, task);
+		rtos_AppendToTaskDLList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED, task);
 	}
 }
 
@@ -163,7 +166,7 @@ void rtos_SchedulePeer(void)
 	if (RTOS_TaskSet_IsEmpty(peersRunning))
 #endif
 	{
-		task = rtos_RemoveFirstTaskFromDList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED);
+		task = rtos_RemoveFirstTaskFromDLList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED);
 		if (0 != task)
 		{
 			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);

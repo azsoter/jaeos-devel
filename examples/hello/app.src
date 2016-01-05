@@ -1,2 +1,13 @@
-SRC = $(APP_DIR)/main.c $(RTOS_DIR)/rtos.c $(DEVICE_DIR)/cpu.c $(DEVICE_DIR)/board.c 
+# For this example compile in everything to check during development that all source files compile. 
+SRC = $(APP_DIR)/main.c \
+	$(RTOS_DIR)/rtos.c \
+	$(RTOS_DIR)/rtos_suspend.c \
+	$(RTOS_DIR)/rtos_timeshare.c \
+	$(RTOS_DIR)/rtos_smp.c \
+	$(RTOS_DIR)/rtos_event.c \
+	$(RTOS_DIR)/rtos_semaphore.c \
+	$(RTOS_DIR)/rtos_changepriority.c \
+	$(RTOS_DIR)/rtos_killtask.c \
+	$(RTOS_DIR)/rtos_wakeuptask.c \
+	$(DEVICE_DIR)/cpu.c $(DEVICE_DIR)/board.c 
 

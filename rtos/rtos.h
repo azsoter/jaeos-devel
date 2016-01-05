@@ -89,7 +89,6 @@ extern "C" {
 typedef volatile struct RTOS_EventHandle RTOS_EventHandle;
 typedef volatile struct RTOS_Semaphore RTOS_Semaphore;
 typedef volatile struct RTOS_Task RTOS_Task;
-typedef volatile struct RTOS_OS RTOS_OS;
 
 #if defined(RTOS_TASKSET_TYPE)
 typedef volatile RTOS_TASKSET_TYPE RTOS_TaskSet;
@@ -123,10 +122,15 @@ typedef RTOS_RegUInt RTOS_TaskPriority;
 #error RTOS_Priority_Highest is higher than the maximum supported on this target.
 #endif
 
-#if defined(RTOS_INCLUDE_DELAY) || defined(RTOS_INCLUDE_NAKED_EVENTS) || defined(RTOS_INCLUDE_SEMAPHORES)
+#if defined(RTOS_INCLUDE_NAKED_EVENTS) || defined(RTOS_INCLUDE_SEMAPHORES)
+#define RTOS_SUPPORT_EVENTS
+#endif
+
+#if defined(RTOS_SUPPORT_EVENTS) || defined(RTOS_INCLUDE_DELAY)
 #define RTOS_SUPPORT_SLEEP
 #endif
 
+// Doubly linked lists.
 struct RTOS_Task_DLList
 {
 	RTOS_Task *Head;
@@ -144,41 +148,38 @@ typedef struct RTOS_Task_DLLink RTOS_Task_DLLink;
 #define RTOS_LIST_WHICH_WAIT		0
 #define RTOS_LIST_WHICH_PREEMPTED	1
 #define RTOS_LIST_WHICH_COUNT		2
- 
-extern RTOS_OS RTOS;
 
-// Structure to hold the system wide state of the operating system.
+// The main RTOS structure representing the internal state of the operating system.
 struct RTOS_OS
 {
-
 #if defined(RTOS_SMP)
-	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];				// The currently running task on each CPU.
-	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];				// Level of interrupts nested.
-	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 				// Tasks allowed to run on this particular core.
-	RTOS_CpuMutex		OSLock;								// Global lock to prevent access of OS structures from other CPUs.
-	RTOS_TaskSet    	RunningTasks;							// Tasks that are currently running on any CPU.
-	RTOS_CpuMask		Cpus;									// A bitmap of all CPUs.
-	RTOS_CpuMask		CpuHoldingPen;							// CPUs in a 'holding pen' (CPU's not running any task).
+	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];	// The currently running task on each CPU.
+	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];	// Level of interrupts nested.
+	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 	// Tasks allowed to run on this particular core.
+	RTOS_CpuMutex		OSLock;					// Global lock to prevent access of OS structures from other CPUs.
+	RTOS_TaskSet    	RunningTasks;				// Tasks that are currently running on any CPU.
+	RTOS_CpuMask		Cpus;					// A bitmap of all CPUs.
+	RTOS_CpuMask		CpuHoldingPen;				// CPUs in a 'holding pen' (CPU's not running any task).
 #else
-	RTOS_Task     		*CurrentTask;							// The currently running task.
-	RTOS_RegUInt   		InterruptNesting;						// Level of interrupts nested.
+	RTOS_Task     		*CurrentTask;				// The currently running task.
+	RTOS_RegUInt   		InterruptNesting;			// Level of interrupts nested.
 #endif
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
-	RTOS_RegUInt		SchedulerLocked;						// Is the scheduler locked.
+	RTOS_RegUInt		SchedulerLocked;			// Is the scheduler locked.
 #endif
-	RTOS_RegInt		IsRunning;							// Is the OS running?
-	RTOS_Time		Time;								// System time in ticks.
-	RTOS_TaskSet    	ReadyToRunTasks;						// Tasks that are ready to run.
+	RTOS_RegInt		IsRunning;				// Is the OS running?
+	RTOS_Time		Time;					// System time in ticks.
+	RTOS_TaskSet    	ReadyToRunTasks;			// Tasks that are ready to run.
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-	RTOS_TaskSet		SuspendedTasks;							// Suspended tasks.
+	RTOS_TaskSet		SuspendedTasks;				// Suspended tasks.
 #endif
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	RTOS_TaskSet		TimeshareTasks;							// Tasks subject to time share scheduling.
-	RTOS_TaskSet		PreemptedTasks;							// Tasks preempted because their time slice has expired.
+	RTOS_TaskSet		TimeshareTasks;				// Tasks subject to time share scheduling.
+	RTOS_TaskSet		PreemptedTasks;				// Tasks preempted because their time slice has expired.
 	RTOS_Task_DLList	PreemptedList;
 #if defined(RTOS_SMP)
-	RTOS_CpuMask		TimeShareCpus;							// CPUs running timeshare tasks.
-	RTOS_RegUInt		TimeshareParallelAllowed;			// The number of time share tasks allowed to run at the same time on different CPUs.
+	RTOS_CpuMask		TimeShareCpus;				// CPUs running timeshare tasks.
+	RTOS_RegUInt		TimeshareParallelAllowed;		// The number of time share tasks allowed to run at the same time on different CPUs.
 #endif
 #endif
 	RTOS_Task     		*TaskList[(RTOS_Priority_Highest) + 1];	// A list (really an array) of pointers to all the task structures.
@@ -187,6 +188,10 @@ struct RTOS_OS
 #endif
 };
 
+typedef volatile struct RTOS_OS RTOS_OS;
+
+extern RTOS_OS RTOS;
+ 
 #if defined(RTOS_SMP)
 extern RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus);
 #endif
@@ -206,7 +211,6 @@ struct RTOS_EventHandle
 #endif
 };
 
-#if defined(RTOS_INCLUDE_SEMAPHORES)
 typedef unsigned int RTOS_SemaphoreCount;
 
 // A counting sempahore.
@@ -224,18 +228,6 @@ extern RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore);
 
 extern RTOS_RegInt  RTOS_PostSemaphore(RTOS_Semaphore *semaphore);
 extern RTOS_RegInt  RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout);
-#endif
-
-
-#define RTOS_TASK_STATUS_ACTIVE		 ((RTOS_RegInt)0)
-#define RTOS_TASK_STATUS_WAITING	 ((RTOS_RegInt)1)
-#define RTOS_TASK_STATUS_SLEEPING	 ((RTOS_RegInt)2)
-#define RTOS_TASK_STATUS_TIMED_OUT 	 ((RTOS_RegInt)3)
-#define RTOS_TASK_STATUS_AWAKENED	 ((RTOS_RegInt)4)
-#define RTOS_TASK_STATUS_PREEMPTED_FLAG	 ((RTOS_RegInt)0x40)
-#define RTOS_TASK_STATUS_SUSPENDED_FLAG	 ((RTOS_RegInt)0x80)
-#define RTOS_TASK_STATUS_STOPPED	 ((RTOS_RegInt)0x07)	  
-#define RTOS_TASK_STATUS_KILLED 	 ((RTOS_RegInt)0x0F)
 
 // Structure representing a thread of execution (known as a task in RTOS parlance).
 struct RTOS_Task
@@ -246,7 +238,7 @@ struct RTOS_Task
 	RTOS_EventHandle   	*WaitFor;			// Event the task is waiting for.
 	RTOS_Time      		WakeUpTime;			// Time when to wake up.
 	void            	(*Action)(void *);		// The main loop of the task.
-	void            	*Parameter;			// Parameter to Function().
+	void            	*Parameter;			// Parameter to Action().
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	RTOS_Time		TicksToRun;			// Ticks remaining from the current timeslice.
 	RTOS_Time		TimeSliceTicks;			// The length of a full time slice for this task.
@@ -267,12 +259,13 @@ RTOS_TARGET_SPECIFIC_TASK_DATA
 #endif
 };
 
-#define RTOS_TIMEOUT_FOREVER (~( RTOS_Time)0)
+#define RTOS_TIMEOUT_FOREVER (~(RTOS_Time)0)
 
 #include <rtos_target.h>
 
 #if !defined(RTOS_IsInsideIsr)
 #if defined(RTOS_SMP)
+// For bring up only.
 // This definition does not always work. For multi-core operation define something more reliable in the actual target specific code.
 #define RTOS_IsInsideIsr() (0 != RTOS.InterruptNesting[RTOS_CurrentCpu()])
 #else
@@ -290,13 +283,13 @@ RTOS_TARGET_SPECIFIC_TASK_DATA
 
 // This function should be called either during initialization (before the OS is running)
 // or from inside a critical section.
-extern RTOS_RegInt RTOS_CreateTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param);
+extern RTOS_RegInt RTOS_CreateTask(RTOS_Task *task, const char *name, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param);
 extern RTOS_Task *RTOS_TaskFromPriority(RTOS_TaskPriority priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
 // This function should be called either during initialization (before the OS is running)
 // or from inside a critical section.
-extern RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(), void *param, RTOS_Time slice);
+extern RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, const char *name, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param, RTOS_Time slice);
 extern void RTOS_YieldTimeSlice(void);
 #endif
 
@@ -319,25 +312,21 @@ extern RTOS_RegInt RTOS_DelayUntil(RTOS_Time wakeUpTime);
 extern void RTOS_YieldPriority(void);
 #endif
 
-#if defined(RTOS_INCLUDE_NAKED_EVENTS)
 extern RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event);
 extern RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout);
 extern RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event);
-#endif
 
-#if defined(RTOS_INCLUDE_CHANGEPRIORITY)
 extern RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriority);
-#endif
 
-#if defined(RTOS_INCLUDE_KILLTASK)
+extern RTOS_RegInt RTOS_KillSelf(void);
 extern RTOS_RegInt RTOS_KillTask(RTOS_Task *task);
-#endif
 
 #if defined(RTOS_USE_TIMER_TASK)
 extern void RTOS_DefaultTimerFunction(void *p);
 #endif
 
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
+extern RTOS_RegInt RTOS_SuspendSelf(void);
 extern RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task);
 extern RTOS_RegInt RTOS_ResumeTask(RTOS_Task *task);
 #endif
