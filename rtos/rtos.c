@@ -57,11 +57,8 @@ RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapac
 	task->IsTimeshared = 0;
 	task->TicksToRun = RTOS_TIMEOUT_FOREVER;
 	task->TimeSliceTicks = RTOS_TIMEOUT_FOREVER;
-	for (i = 0; i < (RTOS_LIST_WHICH_COUNT); i++)
-	{
-		task->FcfsLists[i].Previous = 0;
-		task->FcfsLists[i].Next = 0;
-	}
+	task->Link.Previous = 0;
+	task->Link.Next = 0;
 #endif
 	return RTOS_OK;
 }
@@ -496,8 +493,8 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	if (thisTask->IsTimeshared)
 	{
-		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Previous = 0;
-		thisTask->FcfsLists[ RTOS_LIST_WHICH_WAIT].Next = 0;
+		thisTask->Link.Previous = 0;
+		thisTask->Link.Next = 0;
 	}
 #endif
 	rtos_AddToSleepers(thisTask);
@@ -538,7 +535,7 @@ void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeo
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	if (task->IsTimeshared)
 	{
-		rtos_AppendToTaskDLList(&(event->WaitList), RTOS_LIST_WHICH_WAIT, task);
+		rtos_AppendTaskToDLList(&(event->WaitList), task);
 	}
 #endif
 
@@ -562,7 +559,7 @@ RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task
         RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_RemoveFromTaskDLList(&(event->WaitList), RTOS_LIST_WHICH_WAIT, task);
+	rtos_RemoveTaskFromDLList(&(event->WaitList), task);
 #endif
 	task->WaitFor = 0;
 }
@@ -572,7 +569,7 @@ RTOS_INLINE RTOS_Task *rtos_GetFirstWaitingTask(RTOS_EventHandle *event)
 {
 	RTOS_Task *task = 0;
 
-	task = rtos_RemoveFirstTaskFromDLList(&(event->WaitList), RTOS_LIST_WHICH_WAIT);
+	task = rtos_RemoveFirstTaskFromDLList(&(event->WaitList));
 	return task;
 }
 #endif

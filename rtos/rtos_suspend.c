@@ -97,7 +97,7 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 		RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, priority);
 		RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, priority);
 		task->Status = (task->Status & ~(RTOS_TASK_STATUS_PREEMPTED_FLAG)) | RTOS_TASK_STATUS_SUSPENDED_FLAG;
-		rtos_RemoveFromTaskDLList(&(RTOS.PreemptedList), RTOS_LIST_WHICH_PREEMPTED, task);
+		rtos_RemoveTaskFromDLList(&(RTOS.PreemptedList), task);
 		result = RTOS_OK;
 	}
 #endif

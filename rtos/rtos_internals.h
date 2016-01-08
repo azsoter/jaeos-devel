@@ -94,9 +94,9 @@ extern void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Tim
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
 // Doubly Linked Lists.
-extern void rtos_AppendToTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task);
-extern void rtos_RemoveFromTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task);
-extern RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which);
+extern void rtos_AppendTaskToDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task);
+extern void rtos_RemoveTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task);
+extern RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list);
 
 extern void rtos_PreemptTask(RTOS_Task *task);
 extern void rtos_SchedulePeer(void);

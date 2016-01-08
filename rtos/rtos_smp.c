@@ -49,7 +49,7 @@ RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus)
 {
 	RTOS_RegInt isRunning = RTOS.IsRunning;
 
-	RTOS_SavedCriticalState(saved_state);
+	RTOS_SavedCriticalState(saved_state = 0);
 
 	if (0 == task)
 	{
@@ -70,6 +70,36 @@ RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus)
 
 	return RTOS_OK;
 }
+
+// Retrieve which CPUs are allowed to run the specified task.
+// There is no error reporting, if task is NULL if its priority is ivalid this function simply
+// reports that the task is not allowed to run on any of the CPU cores.
+RTOS_CpuMask RTOS_GetAllowedCpus(RTOS_Task *task)
+{
+	RTOS_CpuMask cpus = 0;
+	RTOS_CpuId i;
+	RTOS_CpuMask mask;
+	RTOS_TaskPriority priority;
+	RTOS_SavedCriticalState(saved_state);
+
+	if (0 != task)
+	{
+		RTOS_EnterCriticalSection(saved_state);
+		priority = task->Priority;
+		for (mask = 1, i = 0; i < (RTOS_SMP_CPU_CORES); i++, mask <<= 1)
+		{
+
+			if (RTOS_TaskSet_IsMember(RTOS.TasksAllowed[i], priority))
+			{
+				cpus |= mask;
+			}
+		}
+		RTOS_ExitCriticalSection(saved_state);
+	}
+
+	return cpus;
+}
+
 // -----------------------------------------------------------------------------------
 RTOS_Task *RTOS_GetCurrentTask(void)
 {

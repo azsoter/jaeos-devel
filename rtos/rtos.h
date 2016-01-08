@@ -1,7 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -145,10 +145,6 @@ struct RTOS_Task_DLLink
 };
 typedef struct RTOS_Task_DLLink RTOS_Task_DLLink;
 
-#define RTOS_LIST_WHICH_WAIT		0
-#define RTOS_LIST_WHICH_PREEMPTED	1
-#define RTOS_LIST_WHICH_COUNT		2
-
 // The main RTOS structure representing the internal state of the operating system.
 struct RTOS_OS
 {
@@ -194,6 +190,7 @@ extern RTOS_OS RTOS;
  
 #if defined(RTOS_SMP)
 extern RTOS_RegInt RTOS_RestrictTaskToCpus(RTOS_Task *task, RTOS_CpuMask cpus);
+extern RTOS_CpuMask RTOS_GetAllowedCpus(RTOS_Task *task);
 #endif
 
 extern RTOS_Task *RTOS_GetCurrentTask(void);
@@ -243,7 +240,7 @@ struct RTOS_Task
 	RTOS_Time		TicksToRun;			// Ticks remaining from the current timeslice.
 	RTOS_Time		TimeSliceTicks;			// The length of a full time slice for this task.
 	RTOS_Time		TimeWatermark;			// A time when the task was last seen running.
-	RTOS_Task_DLLink	FcfsLists[RTOS_LIST_WHICH_COUNT];
+	RTOS_Task_DLLink	Link;
 	RTOS_RegInt		IsTimeshared;			// Is this task time sliced.
 #endif
 #if defined(RTOS_SMP)

@@ -109,7 +109,7 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 		if (RTOS_TaskSet_IsMember(RTOS.PreemptedTasks, priority))
 		{
 			RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, priority);
-			rtos_RemoveFromTaskDLList(&(RTOS.PreemptedList), RTOS_LIST_WHICH_PREEMPTED, task);
+			rtos_RemoveTaskFromDLList(&(RTOS.PreemptedList), task);
 			result = RTOS_OK;
 		}
 	}

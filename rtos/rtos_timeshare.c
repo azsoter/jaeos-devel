@@ -25,59 +25,59 @@
 */
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-void rtos_AppendToTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
+void rtos_AppendTaskToDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task)
 {
 	if (0 == list->Tail)
 	{
 		list->Head = task;
 		list->Tail = task;
-		task->FcfsLists[which].Previous = 0;
-		task->FcfsLists[which].Next = 0;
+		task->Link.Previous = 0;
+		task->Link.Next = 0;
 	}
 	else
 	{
-		task->FcfsLists[which].Previous = list->Tail;
-		task->FcfsLists[which].Next = 0;
-		list->Tail->FcfsLists[which].Next = task;
+		task->Link.Previous = list->Tail;
+		task->Link.Next = 0;
+		list->Tail->Link.Next = task;
 		list->Tail = task;
 	}
 }
 
-void rtos_RemoveFromTaskDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which, RTOS_Task *task)
+void rtos_RemoveTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task)
 {
 
 	if (task == list->Head)
 	{
-		list->Head = task->FcfsLists[which].Next;
+		list->Head = task->Link.Next;
 	}
 
 	if (task == list->Tail)
 	{
-		list->Tail = task->FcfsLists[which].Previous;
+		list->Tail = task->Link.Previous;
 	}
 
-	if (0 != task->FcfsLists[which].Previous)
+	if (0 != task->Link.Previous)
 	{
-		task->FcfsLists[which].Previous->FcfsLists[which].Next = task->FcfsLists[which].Next;
+		task->Link.Previous->Link.Next = task->Link.Next;
 	}
 
-	if (0 != task->FcfsLists[which].Next)
+	if (0 != task->Link.Next)
 	{
-		task->FcfsLists[which].Next->FcfsLists[which].Previous = task->FcfsLists[which].Previous;
+		task->Link.Next->Link.Previous = task->Link.Previous;
 	}
 
-	task->FcfsLists[which].Previous = 0;
-	task->FcfsLists[which].Next = 0;
+	task->Link.Previous = 0;
+	task->Link.Next = 0;
 }
 
-RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_RegInt which)
+RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list)
 {
 	RTOS_Task *task = 0;
 
 	if (0 != list->Head)
 	{
 		task = list->Head;
-		list->Head = task->FcfsLists[which].Next;
+		list->Head = task->Link.Next;
 
 		if (0 == list->Head)
 		{
@@ -85,11 +85,11 @@ RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_
 		}
 		else
 		{
-			list->Head->FcfsLists[which].Previous = 0;
+			list->Head->Link.Previous = 0;
 		}
 
-		task->FcfsLists[which].Previous = 0;
-		task->FcfsLists[which].Next = 0;
+		task->Link.Previous = 0;
+		task->Link.Next = 0;
 	}
 
 	return task;
@@ -148,7 +148,7 @@ void rtos_PreemptTask(RTOS_Task *task)
 		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
 		RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, task->Priority);
 		task->Status |= RTOS_TASK_STATUS_PREEMPTED_FLAG;
-		rtos_AppendToTaskDLList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED, task);
+		rtos_AppendTaskToDLList(&(RTOS.PreemptedList), task);
 	}
 }
 
@@ -166,7 +166,7 @@ void rtos_SchedulePeer(void)
 	if (RTOS_TaskSet_IsEmpty(peersRunning))
 #endif
 	{
-		task = rtos_RemoveFirstTaskFromDLList(&(RTOS.PreemptedList),  RTOS_LIST_WHICH_PREEMPTED);
+		task = rtos_RemoveFirstTaskFromDLList(&(RTOS.PreemptedList));
 		if (0 != task)
 		{
 			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
