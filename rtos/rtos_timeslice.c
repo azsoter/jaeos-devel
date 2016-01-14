@@ -95,7 +95,7 @@ RTOS_RegInt RTOS_SetTimeSlice(RTOS_Task *task, RTOS_Time slice)
 	RTOS_EnterCriticalSection(saved_state);
 		task->TimeSliceTicks = slice;
 
-		if ((task->TicksToRun > slice) || (RTOS_TIMEOUT_FOREVER == slice))
+		if ((task->TicksToRun > slice) || (RTOS_TIMEOUT_FOREVER == task->TicksToRun) || (RTOS_TIMEOUT_FOREVER == slice))
 		{
 			task->TicksToRun = slice;
 		}
