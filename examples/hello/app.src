@@ -3,6 +3,7 @@ SRC = $(APP_DIR)/main.c \
 	$(RTOS_DIR)/rtos.c \
 	$(RTOS_DIR)/rtos_suspend.c \
 	$(RTOS_DIR)/rtos_timeshare.c \
+	$(RTOS_DIR)/rtos_timeslice.c \
 	$(RTOS_DIR)/rtos_smp.c \
 	$(RTOS_DIR)/rtos_event.c \
 	$(RTOS_DIR)/rtos_semaphore.c \

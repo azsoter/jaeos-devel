@@ -288,6 +288,9 @@ extern RTOS_Task *RTOS_TaskFromPriority(RTOS_TaskPriority priority);
 // or from inside a critical section.
 extern RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, const char *name, RTOS_TaskPriority priority, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param, RTOS_Time slice);
 extern void RTOS_YieldTimeSlice(void);
+extern RTOS_Time RTOS_GetTimeSlice(RTOS_Task *task);
+extern RTOS_Time RTOS_GetRemainingTicks(RTOS_Task *task);
+extern RTOS_RegInt RTOS_SetTimeSlice(RTOS_Task *task, RTOS_Time slice);
 #endif
 
 #if defined(RTOS_TASK_NAME_LENGTH)
