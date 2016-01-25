@@ -86,9 +86,9 @@ extern "C" {
 #define RTOS_Priority_Idle			0
 
 // Types used by the OS.
-typedef volatile struct RTOS_EventHandle RTOS_EventHandle;
-typedef volatile struct RTOS_Semaphore RTOS_Semaphore;
-typedef volatile struct RTOS_Task RTOS_Task;
+typedef volatile struct rtos_EventHandle RTOS_EventHandle;
+typedef volatile struct rtos_Semaphore RTOS_Semaphore;
+typedef volatile struct rtos_Task RTOS_Task;
 
 #if defined(RTOS_TASKSET_TYPE)
 typedef volatile RTOS_TASKSET_TYPE RTOS_TaskSet;
@@ -131,22 +131,22 @@ typedef RTOS_RegUInt RTOS_TaskPriority;
 #endif
 
 // Doubly linked lists.
-struct RTOS_Task_DLList
+struct rtos_Task_DLList
 {
 	RTOS_Task *Head;
 	RTOS_Task *Tail;
 };
-typedef struct RTOS_Task_DLList RTOS_Task_DLList;
+typedef struct rtos_Task_DLList RTOS_Task_DLList;
 
-struct RTOS_Task_DLLink
+struct rtos_Task_DLLink
 {
 	RTOS_Task *Previous;
 	RTOS_Task *Next;
 };
-typedef struct RTOS_Task_DLLink RTOS_Task_DLLink;
+typedef struct rtos_Task_DLLink RTOS_Task_DLLink;
 
 // The main RTOS structure representing the internal state of the operating system.
-struct RTOS_OS
+struct rtos_OS
 {
 #if defined(RTOS_SMP)
 	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];	// The currently running task on each CPU.
@@ -184,7 +184,7 @@ struct RTOS_OS
 #endif
 };
 
-typedef volatile struct RTOS_OS RTOS_OS;
+typedef volatile struct rtos_OS RTOS_OS;
 
 extern RTOS_OS RTOS;
  
@@ -200,7 +200,7 @@ extern RTOS_Time RTOS_GetTime(void);
 
 // Represents an 'event' that a task can wait for.
 // Only used to implement other constructs for synchronization.
-struct RTOS_EventHandle
+struct rtos_EventHandle
 {
 	RTOS_TaskSet    	TasksWaiting;	// The tasks waiting for this event.
 #if defined(RTOS_SUPPORT_TIMESHARE)
@@ -211,7 +211,7 @@ struct RTOS_EventHandle
 typedef unsigned int RTOS_SemaphoreCount;
 
 // A counting sempahore.
-struct RTOS_Semaphore
+struct rtos_Semaphore
 {
 	RTOS_EventHandle	Event;		// A generic 'event' structure suitable for waiting.
 	RTOS_SemaphoreCount	Count;		// The semaphore's count.
@@ -227,7 +227,7 @@ extern RTOS_RegInt  RTOS_PostSemaphore(RTOS_Semaphore *semaphore);
 extern RTOS_RegInt  RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout);
 
 // Structure representing a thread of execution (known as a task in RTOS parlance).
-struct RTOS_Task
+struct rtos_Task
 {
 	void                	*SP;				// Stack Pointer.
 	void                	*SP0;				// Botton of the stack  (for debugging).
