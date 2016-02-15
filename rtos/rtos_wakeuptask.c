@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2015.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,37 +21,40 @@
 *
 */
 
+#include <stdint.h>
 #include <rtos.h>
-#include <board.h>
+#include <rtos_internals.h>
 
-#define STACK_SIZE 512
-RTOS_StackItem_t stack_hello[STACK_SIZE];
-RTOS_StackItem_t stack_idle[RTOS_MIN_STACK_SIZE];
+#if !defined(RTOS_INCLUDE_WAKEUP)
+#define RTOS_INCLUDE_WAKEUP must be defined.
+#endif
 
-RTOS_Task task_hello;
-RTOS_Task task_idle;
-
-// Say Hello!
-void say_hello(void *p)
+// Prematurely wake up a task that is sleeping or waiting for an event.
+// 
+RTOS_RegInt RTOS_WakeupTask(RTOS_Task *task)
 {
-    while(1) 
-    {
-	Board_Puts("Hello World!\r\n");
-    }
-    (void)p;	// Pacifier for the compiler.
-}
+	RTOS_RegInt result;
+	RTOS_SavedCriticalState(saved_state);
+#if defined(RTOS_USE_ASSERTS)
+	RTOS_ASSERT(0 != task);
+#endif
 
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
+	if (0 == task)
+	{
+        	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
+#endif
 
-int main()
-{
-    	RTOS_CreateTask(&task_idle,  "Idle",  RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-    	RTOS_CreateTask(&task_hello, "Hello", RTOS_Priority_Hello, stack_hello, STACK_SIZE, &say_hello, 0);
+	RTOS_EnterCriticalSection(saved_state);
+	result = rtos_WakeupTask(task);
+	RTOS_ExitCriticalSection(saved_state);
 
-	Board_HardwareInit();					// Initialize hardware as appropriate for the system/board.
+    	if (!RTOS_IsInsideIsr() && !RTOS_SchedulerIsLocked())
+    	{
+		RTOS_INVOKE_SCHEDULER();
+	}
 
-	RTOS_StartMultitasking();
-	Board_Puts("Something has gone seriously wrong!\r\n");	// We should never get here!
-    	while(1);
-    	return 0;						// Unreachable.
+	return result;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -55,11 +55,8 @@ void test(void *p)
 
 int main()
 {
-    	RTOS_CreateTask(&task_idle, RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-	RTOS_SetTaskName(&task_idle, "Idle");
-
-    	RTOS_CreateTask(&task_test,     RTOS_Priority_Test, stack_test, STACK_SIZE, &test, 0);
-	RTOS_SetTaskName(&task_test, "Test");
+    	RTOS_CreateTask(&task_idle, "Idle", RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
+    	RTOS_CreateTask(&task_test, "Test", RTOS_Priority_Test, stack_test, STACK_SIZE, &test, 0);
 
 	Board_HardwareInit();					// Initialize hardware as appropriate for the system/board.
 

@@ -1,7 +1,7 @@
 #ifndef RTOS_QUEUE_H
 #define RTOS_QUEUE_H
 /*
-* Copyright (c) Andras Zsoter 2014, 2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ extern "C" {
 // or QueueCount could be smaller but that almost never makes sense.
 typedef RTOS_SemaphoreCount RTOS_QueueCount;
 
-struct RTOS_Queue	// A FIFO (Queue or message queue).
+struct rtos_Queue	// A FIFO (Queue or message queue).
 {
 	RTOS_Semaphore  SemFilledSlots;	// Semaphore conting filled slots.
 	RTOS_Semaphore  SemEmptySlots;	// Semaphore conting empty  slots.
@@ -43,7 +43,7 @@ struct RTOS_Queue	// A FIFO (Queue or message queue).
 	void **Buffer;
 };
 
-typedef struct RTOS_Queue RTOS_Queue;
+typedef struct rtos_Queue RTOS_Queue;
 
 extern RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount size);
 extern RTOS_RegInt RTOS_DestroyQueue(RTOS_Queue *queue);

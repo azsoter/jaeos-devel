@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 #include "board.h"
+#include "rtos_debug.h"
 
 void rtos_debug_putchar(char c)
 {
@@ -104,16 +105,16 @@ void rtos_debug_PrintTask(const RTOS_Task *task)
 	rtos_debug_putchar(')');
 	rtos_debug_putchar(' ');
 #if defined(RTOS_TASK_NAME_LENGTH)
-	rtos_debug_PrintStr(task->TaskName);
+	rtos_debug_PrintStr((const char *)(task->TaskName));
 #endif
 	rtos_debug_putchar('\n');
 
-	rtos_debug_PrintStrPadded("SP:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->SP, 0);
+	rtos_debug_PrintStrPadded("SP:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex((uint32_t)(task->SP), 0);
 	rtos_debug_PrintStr(" Ret: "); rtos_debug_PrintHex(RTOS_TASK_EXEC_LOCATION(task), 1);
-	rtos_debug_PrintStrPadded("SP0:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->SP0, 1);
+	rtos_debug_PrintStrPadded("SP0:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex((uint32_t)(task->SP0), 1);
 	rtos_debug_PrintStrPadded("Priority:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->Priority, 1);
 
-	rtos_debug_PrintStrPadded("WaitFor:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->WaitFor, 1);
+	rtos_debug_PrintStrPadded("WaitFor:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex((uint32_t)(task->WaitFor), 1);
 	rtos_debug_PrintStrPadded("WakeUpTime:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->WakeUpTime, 1);
 
 
@@ -139,9 +140,25 @@ void rtos_debug_PrintTask(const RTOS_Task *task)
 	rtos_debug_PrintStr("----------------------------------\n");
 }
 
+void rtos_debug_PrintAllTasks(void)
+{
+	RTOS_TaskPriority pr;
+	RTOS_Task *task;
+	for (pr = RTOS_Priority_Idle; pr <= RTOS_Priority_Highest; pr++)
+	{
+		task = rtos_TaskFromPriority(pr);
+		if (0 != task)
+		{
+			rtos_debug_PrintTask(task);
+		}
+	}
+}
+
 void rtos_debug_PrintOS(void)
 {
+#if defined(RTOS_SMP)
 	int i;
+#endif
 
 	rtos_debug_PrintStr("\nRTOS:\n");
 

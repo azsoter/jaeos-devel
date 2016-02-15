@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014, 2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -62,21 +62,18 @@ void initTasks(void)
 	char name[3] = { 'T', '?', 0 };
 
 #if defined(RTOS_USE_TIMER_TASK)
-	RTOS_CreateTask(&(tasks[RTOS_Priority_Timer]),     RTOS_Priority_Timer, &(stacks[RTOS_Priority_Timer]), STACK_SIZE, &RTOS_DefaultTimerFunction, 0);
-	RTOS_SetTaskName(&(tasks[RTOS_Priority_Timer]), "Timer");
+	RTOS_CreateTask(&(tasks[RTOS_Priority_Timer]), "Timer", RTOS_Priority_Timer, &(stacks[RTOS_Priority_Timer]), STACK_SIZE, &RTOS_DefaultTimerFunction, 0);
 #endif
 
-	RTOS_CreateTask(&(tasks[0]),     RTOS_Priority_Idle, &(stacks[0]), STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-	RTOS_SetTaskName(&(tasks[0]), "Idle");
+	RTOS_CreateTask(&(tasks[0]), "Idle", RTOS_Priority_Idle, &(stacks[0]), STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
 
 	for (i = 1; i < TASK_COUNT; i++)
 	{
 		// All tasks in this example are allotted a different sized time slice.
 		// As a result each will iterate a different number of times before it gets preempted
 		// because its time slice has expired and print a different number of the unique digit in its name.
-    		RTOS_CreateTimeShareTask(&(tasks[i]),     i, &(stacks[i]), STACK_SIZE, &f, 0, (2 * i) + 1);
 		name[1] = '0' + i;
-		RTOS_SetTaskName(&(tasks[i]), name);
+    		RTOS_CreateTimeShareTask(&(tasks[i]), name, i, &(stacks[i]), STACK_SIZE, &f, 0, (2 * i) + 1);
 	}
 }
 

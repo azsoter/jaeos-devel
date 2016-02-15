@@ -1,3 +1,5 @@
+#ifndef RTOS_CONFIG_H
+#define RTOS_CONFIG_H
 /*
 * Copyright (c) Andras Zsoter 2015-2016.
 *
@@ -20,38 +22,28 @@
 * THE SOFTWARE.
 *
 */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <rtos.h>
-#include <board.h>
+#define RTOS_TASK_NAME_LENGTH	32
 
-#define STACK_SIZE 512
-RTOS_StackItem_t stack_hello[STACK_SIZE];
-RTOS_StackItem_t stack_idle[RTOS_MIN_STACK_SIZE];
+#define RTOS_TICKS_PER_SECOND 	100
+	
+#define RTOS_Priority_Hello1     1
+#define RTOS_Priority_Hello2     2
 
-RTOS_Task task_hello;
-RTOS_Task task_idle;
+#define RTOS_INCLUDE_DELAY
+#define RTOS_SUPPORT_SLEEP
+#define RTOS_SUPPORT_EVENTS
 
-// Say Hello!
-void say_hello(void *p)
-{
-    while(1) 
-    {
-	Board_Puts("Hello World!\r\n");
-    }
-    (void)p;	// Pacifier for the compiler.
+
+// RTOS_Priority_Highest must be defined and it must be equal to the highest priority ever used by the application.
+#define RTOS_Priority_Highest    RTOS_Priority_Hello2
+
+#ifdef __cplusplus
 }
+#endif
 
-
-int main()
-{
-    	RTOS_CreateTask(&task_idle,  "Idle",  RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-    	RTOS_CreateTask(&task_hello, "Hello", RTOS_Priority_Hello, stack_hello, STACK_SIZE, &say_hello, 0);
-
-	Board_HardwareInit();					// Initialize hardware as appropriate for the system/board.
-
-	RTOS_StartMultitasking();
-	Board_Puts("Something has gone seriously wrong!\r\n");	// We should never get here!
-    	while(1);
-    	return 0;						// Unreachable.
-}
+#endif
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -393,7 +393,7 @@ sys_thread_t sys_thread_new(const char *name, void(*f)(void *), void *param, int
 			sthread = &(sys_task_array[(i - (RTOS_Priority_FirstManagedTask))]);
 			task = &(sthread->task);
 			memset((void *)task, 0, sizeof(RTOS_Task));
-			res = RTOS_CreateTimeShareTask( task, i, sthread->stack, ((TCPIP_THREAD_STACKSIZE)/sizeof(RTOS_StackItem_t)), f, param, 
+			res = RTOS_CreateTimeShareTask( task, name, i, sthread->stack, ((TCPIP_THREAD_STACKSIZE)/sizeof(RTOS_StackItem_t)), f, param, 
 					                      RTOS_DEFAULT_TIME_SLICE
 							);
 			if (RTOS_OK != res)
@@ -412,7 +412,7 @@ sys_thread_t sys_thread_new(const char *name, void(*f)(void *), void *param, int
 					// RTOS_RestrictTaskToCpus(task, 1UL << RTOS_CurrentCpu());
 				}
 #endif
-				RTOS_SetTaskName(task, name);
+				// RTOS_SetTaskName(task, name);
 			}
 		}
 

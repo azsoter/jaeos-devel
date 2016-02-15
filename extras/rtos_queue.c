@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014, 2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,6 @@
 RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount size)
 {
 	RTOS_RegInt result;
-
-	RTOS_SavedCriticalState(saved_state);
-
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != queue);
 	RTOS_ASSERT(0 != size);
@@ -41,11 +38,11 @@ RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount si
 	}
 #endif
 
-	RTOS_EnterCriticalSection(saved_state);
 	queue->Head = 0;
 	queue->Tail = 0;
 	result = RTOS_CreateSemaphore(&(queue->SemFilledSlots), 0);
 	result = RTOS_CreateSemaphore(&(queue->SemEmptySlots), size);
+
 	if (RTOS_OK == result)
 	{
 		queue->Size = size;
@@ -56,7 +53,6 @@ RTOS_RegInt RTOS_CreateQueue(RTOS_Queue *queue, void *buffer, RTOS_QueueCount si
 		queue->Size = 0;
 		queue->Buffer = 0;
 	}
-	RTOS_ExitCriticalSection(saved_state);
 
 	return result;
 }

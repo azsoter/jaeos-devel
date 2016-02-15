@@ -1,5 +1,7 @@
+#ifndef RTOS_DEBUG_H
+#define RTOS_DEBUG_H
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,37 +23,15 @@
 *
 */
 
-#include <rtos.h>
-#include <board.h>
+extern void rtos_debug_putchar(char c);
+extern void rtos_debug_PrintStr(const char *s);
+extern void rtos_debug_PrintStrPadded(const char *s, int width);
+extern void rtos_debug_PrintHex(uint32_t x, int cr);
+// -------------------------------
+extern void rtos_Debug(void);
+extern void rtos_debug_PrintOS(void);
+extern void rtos_debug_PrintAllTasks(void);
+extern void rtos_debug_PrintTask(const RTOS_Task *task);
 
-#define STACK_SIZE 512
-RTOS_StackItem_t stack_hello[STACK_SIZE];
-RTOS_StackItem_t stack_idle[RTOS_MIN_STACK_SIZE];
-
-RTOS_Task task_hello;
-RTOS_Task task_idle;
-
-// Say Hello!
-void say_hello(void *p)
-{
-    while(1) 
-    {
-	Board_Puts("Hello World!\r\n");
-    }
-    (void)p;	// Pacifier for the compiler.
-}
-
-
-int main()
-{
-    	RTOS_CreateTask(&task_idle,  "Idle",  RTOS_Priority_Idle,  stack_idle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-    	RTOS_CreateTask(&task_hello, "Hello", RTOS_Priority_Hello, stack_hello, STACK_SIZE, &say_hello, 0);
-
-	Board_HardwareInit();					// Initialize hardware as appropriate for the system/board.
-
-	RTOS_StartMultitasking();
-	Board_Puts("Something has gone seriously wrong!\r\n");	// We should never get here!
-    	while(1);
-    	return 0;						// Unreachable.
-}
+#endif
 

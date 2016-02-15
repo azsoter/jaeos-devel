@@ -1,7 +1,7 @@
 #ifndef RTOS_CONFIG_H
 #define RTOS_CONFIG_H
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,15 @@ extern "C" {
 #define RTOS_TICKS_PER_SECOND 	100
 	
 #define RTOS_Priority_Hello     1
+
+#define RTOS_SUPPORT_SLEEP
+#define RTOS_SUPPORT_EVENTS
+#define RTOS_SUPPORT_TIMESHARE
+#define RTOS_INCLUDE_WAKEUP
+
+#define RTOS_INCLUDE_SUSPEND_AND_RESUME
+#define RTOS_INCLUDE_NAKED_EVENTS
+#define RTOS_INCLUDE_NAKED_SEMAPHORE
 
 // RTOS_Priority_Highest must be defined and it must be equal to the highest priority ever used by the application.
 #define RTOS_Priority_Highest    RTOS_Priority_Hello

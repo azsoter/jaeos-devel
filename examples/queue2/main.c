@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014, 2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -124,14 +124,10 @@ extern void HardwareInit(void);
 
 int main()
 {
-    	RTOS_CreateTask(&task1,     RTOS_Priority_Producer, stack1, 512, &Producer, 0);
-	RTOS_SetTaskName(&task1, "Producer");
-    	RTOS_CreateTask(&task2,     RTOS_Priority_Consumer1, stack2, 512, &Consumer1, 0);
-	RTOS_SetTaskName(&task2, "Consumer1");
-    	RTOS_CreateTask(&task3,     RTOS_Priority_Consumer2, stack3, 512,  &Consumer2, 0);
-	RTOS_SetTaskName(&task3, "Consumer2");
-    	RTOS_CreateTask(&task_idle, RTOS_Priority_Idle,  stackIdle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
-	RTOS_SetTaskName(&task_idle, "Idle");
+    	RTOS_CreateTask(&task1, "Producer",   RTOS_Priority_Producer, stack1, 512, &Producer, 0);
+    	RTOS_CreateTask(&task2, "Consumer1",  RTOS_Priority_Consumer1, stack2, 512, &Consumer1, 0);
+    	RTOS_CreateTask(&task3, "Consumer2",  RTOS_Priority_Consumer2, stack3, 512,  &Consumer2, 0);
+    	RTOS_CreateTask(&task_idle, "Idle", RTOS_Priority_Idle,  stackIdle, RTOS_MIN_STACK_SIZE, &RTOS_DefaultIdleFunction, 0);
 
 	Board_HardwareInit();
 	RTOS_StartMultitasking();
