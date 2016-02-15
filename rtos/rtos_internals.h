@@ -38,7 +38,7 @@ extern "C" {
 #define RTOS_TaskSet_Difference(S1, S2) ((S1) & (~(S2))) /* Set-theoric difference AKA Relative Complement. */
 #endif
 
-#define rtos_TaskFromPriority(PRIORITY) (((PRIORITY) > RTOS_Priority_Highest) ? (RTOS_Task *)0 : RTOS.TaskList[priority])
+#define rtos_TaskFromPriority(PRIORITY) (((PRIORITY) > RTOS_Priority_Highest) ? (RTOS_Task *)0 : RTOS.TaskList[(PRIORITY)])
 
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 #define RTOS_SchedulerIsLocked() (0 != RTOS.SchedulerLocked)
@@ -50,7 +50,7 @@ extern "C" {
 extern void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity);
 
 // Initialization.
-extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapacity, void (*f)(), void *param);
+extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param);
 extern RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority);
 
 // Internal task states.
