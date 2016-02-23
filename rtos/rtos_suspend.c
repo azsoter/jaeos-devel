@@ -25,10 +25,7 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 
-#if !defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-#error RTOS_INCLUDE_SUSPEND_AND_RESUME must be defined.
-#endif
-
+#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 {
 	RTOS_RegInt result = RTOS_ERROR_FAILED;
@@ -111,4 +108,5 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 
 	return result;
 }
+#endif
 

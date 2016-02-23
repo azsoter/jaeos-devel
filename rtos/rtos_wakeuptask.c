@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,7 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 
-#if !defined(RTOS_INCLUDE_WAKEUP)
-#define RTOS_INCLUDE_WAKEUP must be defined.
-#endif
-
+#if defined(RTOS_INCLUDE_WAKEUP)
 // Prematurely wake up a task that is sleeping or waiting for an event.
 // 
 RTOS_RegInt RTOS_WakeupTask(RTOS_Task *task)
@@ -57,4 +54,6 @@ RTOS_RegInt RTOS_WakeupTask(RTOS_Task *task)
 
 	return result;
 }
+#endif
+
 
