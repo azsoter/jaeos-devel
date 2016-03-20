@@ -1,7 +1,7 @@
 #ifndef RTOS_TYPES_H
 #define RTOS_TYPES_H
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,10 @@
 
 #include <stdint.h>
 
+#if !defined(RTOS_ARM_NEON_SUPPORT)
+#define RTOS_ARM_NEON_SUPPORT 1
+#endif
+
 // Type to store saved flags e.g. when we enter and exit critical state.
 typedef uint32_t RTOS_Critical_State;
 
@@ -32,6 +36,11 @@ typedef uint32_t RTOS_StackItem_t;
 
 struct rtos_StackFrame
 {
+#if (RTOS_ARM_NEON_SUPPORT)
+	uint32_t fpexc;
+	uint32_t fpscr;
+	uint64_t neon_dregs[32];
+#endif
 	RTOS_StackItem_t spsr;
 	RTOS_StackItem_t regs[16];
 };

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,26 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 #include <xil_cache.h>
+#include <xil_cache.h>
+
+#if (RTOS_ARM_NEON_SUPPORT)
+#define SAVE_NEON_REGISTERS()		__asm__ volatile ("VSTMDB LR!, {D16-D31}");	\
+					__asm__ volatile ("VSTMDB LR!, {D0-D15}");	\
+					__asm__ volatile ("VMRS  R0,   FPSCR");		\
+					__asm__ volatile ("STMDB LR!,  {R0}");		\
+					__asm__ volatile ("VMRS  R0,   FPEXC");		\
+					__asm__ volatile ("STMDB LR!,  {R0}");
+
+#define RESTORE_NEON_REGISTERS()	__asm__ volatile ("LDMIA LR!,   {R0}");		\
+					__asm__ volatile ("VMSR  FPEXC, R0");		\
+					__asm__ volatile ("LDMIA LR!,   {R0}");		\
+					__asm__ volatile ("VMSR  FPSCR, R0");		\
+					__asm__ volatile("VLDM LR!,     {D0-D15}");	\
+					__asm__ volatile("VLDM LR!,     {D16-D31}");
+#else
+#define SAVE_NEON_REGISTERS()
+#define RESTORE_NEON_REGISTERS()
+#endif
 
 extern void rtos_Debug(void);
 
@@ -218,6 +238,7 @@ RTOS_Critical_State rtos_ARM_SMP_EnterCriticalSection(volatile RTOS_CpuMutex *lo
 	__asm__ volatile ("AND		R1, R1, #0x0f");	/* Mask out bits. */ \
 	__asm__ volatile ("LDR		R0, [R0, R1, LSL #2]");		/* The Current Task structure pointer per CPU. */ \
 	__asm__ volatile ("LDR		LR, [R0]");		/* The first field in the task structure is the stack pointer. */ \
+	RESTORE_NEON_REGISTERS()				/* Restore NEON Registers. */	\
 	__asm__ volatile ("LDMFD	LR!, {R0}");		/* POP SPSR value to R0. */ \
 	__asm__ volatile ("MSR		SPSR_cxsf, R0");	/* Restore SPSR. */ \
 	__asm__ volatile ("LDMFD	LR, {R0-R14}^");	/* POP general purpose registers. */ \
@@ -237,6 +258,7 @@ RTOS_Critical_State rtos_ARM_SMP_EnterCriticalSection(volatile RTOS_CpuMutex *lo
 	__asm__ volatile ("SUB		LR, LR, #60");		/* Adjust LR. */ \
 	__asm__ volatile ("MRS		R0, SPSR");		/* Read SPSR. */ \
 	__asm__ volatile ("STMDB	LR!, {R0}");		/* Push the SPSR value. */ \
+	SAVE_NEON_REGISTERS()					/* Save NEON registers. */ \
 	__asm__ volatile ("LDR		R0, =RTOS");		/* The address of the RTOS structure. */ \
 	__asm__ volatile ("MRC		P15, 0, R1, C0, C0, 5"); /* Get CPU ID. */ \
 	__asm__ volatile ("AND		R1, R1, #0x0f");	/* Mask out bits. */ \
@@ -349,6 +371,7 @@ void rtos_SecondaryCpu(void)
 	__asm__ volatile ("LDR		R0, =RTOS");		/* The address of the RTOS structure.*/ 	\
 	__asm__ volatile ("LDR		R0, [R0]");		/* The first address is a pointer to the Current Task structure. */ \
 	__asm__ volatile ("LDR		LR, [R0]");		/* The first field in the task structure is the stack pointer. */ \
+	RESTORE_NEON_REGISTERS()				/* Restore NEON Registers. */	\
 	__asm__ volatile ("LDMFD	LR!, {R0}");		/* POP SPSR value to R0. */ \
 	__asm__ volatile ("MSR		SPSR_cxsf, R0");	/* Restore SPSR. */ \
 	__asm__ volatile ("LDMFD	LR, {R0-R14}^");	/* POP general purpose registers. */ \
@@ -368,6 +391,7 @@ void rtos_SecondaryCpu(void)
 	__asm__ volatile ("SUB		LR, LR, #60");		/* Adjust LR. */ \
 	__asm__ volatile ("MRS		R0, SPSR");		/* Read SPSR. */ \
 	__asm__ volatile ("STMDB	LR!, {R0}");		/* Push the SPSR value. */ \
+	SAVE_NEON_REGISTERS()					/* Save NEON registers. */ \
 	__asm__ volatile ("LDR		R0, =RTOS");		/* The address of the RTOS structure. */ \
 	__asm__ volatile ("LDR		R0, [R0]");		/* The first field points to the Current task structure.*/ \
 	__asm__ volatile ("STR		LR, [R0]");		/* Store the stack pointer in the task structure. */ \
@@ -576,7 +600,10 @@ extern void rtos_TaskEntryPoint(void);
 void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity)
 {
 	rtos_StackFrame *sp;
-	
+#if (RTOS_ARM_NEON_SUPPORT)
+	volatile uint32_t tmp;
+	int i;
+#endif	
 	// The stack pointer can legitimately be 0 at this point if the task is initialized as the 'current thread of execution'.
 	if (0 != task->SP0)
 	{
@@ -599,6 +626,16 @@ void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapacity)
 		sp->regs[2] = 0x2; 
 		sp->regs[1] = 0x1; 
 		sp->regs[0] = 0x0;
+#if (RTOS_ARM_NEON_SUPPORT)
+		for (i = 0; i < 32; i++)
+		{
+			sp->neon_dregs[i] = 0;
+		}
+		__asm__ volatile ("VMRS  %0, FPEXC" : "=r" (tmp));
+		sp->fpexc = tmp;
+		__asm__ volatile ("VMRS  %0, FPSCR" : "=r" (tmp));
+		sp->fpscr = tmp;
+#endif
 	}
 }
 
