@@ -63,14 +63,11 @@ RTOS_RegInt RTOS_PostSemaphore(RTOS_Semaphore *semaphore)
 	{
 		RTOS_ExitCriticalSection(saved_state);
 
-		if (!RTOS_IsInsideIsr() && !RTOS_SchedulerIsLocked())
-		{
-			RTOS_INVOKE_SCHEDULER();
-		}
+		RTOS_REQUEST_RESCHEDULING()
 	}
-    	else
-    	{
-        	if ((RTOS_SEMAPHORE_COUNT_MAX) > semaphore->Count)
+    else
+    {
+        if ((RTOS_SEMAPHORE_COUNT_MAX) > semaphore->Count)
 		{
         		semaphore->Count++;
 		}
@@ -79,8 +76,8 @@ RTOS_RegInt RTOS_PostSemaphore(RTOS_Semaphore *semaphore)
 			result = RTOS_ERROR_OVERFLOW;
 		}
 
-        	RTOS_ExitCriticalSection(saved_state);
-    	}
+        RTOS_ExitCriticalSection(saved_state);
+    }
 
 	return result;
 

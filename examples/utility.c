@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2015.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -59,6 +59,27 @@ void PrintHexNoCr(uint32_t x)
 	Board_Puts(buff);
 }
 
+void PrintUnsignedDecimal(uint32_t x)
+{
+	char buff[11];
+	int i;
+	char *p;
+	buff[10] = '\0';
+	p = &(buff[10]);
+	if (0 == x)
+	{
+		*(--p) = '0';
+	}
+	else
+	{
+		while(x)
+		{
+			*(--p) = hexDigits[x % 10];
+			x = x / 10;
+		}
+	}
+	Board_Puts(p);
+}
 
 // Print some information about what assert has failed.
 // Then just loop in an endless loop.
