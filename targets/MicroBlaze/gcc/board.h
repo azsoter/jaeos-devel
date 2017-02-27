@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-extern void outbyte(char);
-void print(char *str);
+#include <xil_printf.h>
 
 #define Board_Putc(C) outbyte(C)
 #define Board_Puts(S) print(S)

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014.
+* Copyright (c) Andras Zsoter 2014, 2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,12 @@
 * THE SOFTWARE.
 *
 */
+
+#include <xparameters.h>
+
+#if (0 != XPAR_MICROBLAZE_0_USE_FPU)
+#define MICROBLAZE_HAS_FPU 1
+#endif
 
 .extern RTOS
 .extern rtos_Scheduler
@@ -49,7 +55,7 @@ _interrupt_handler:
 	SWI		R19, R1, 0x4C		/* PUSH general purpose registers. */
 	SWI		R18, R1, 0x48		/* PUSH general purpose registers. */
 	SWI		R17, R1, 0x44		/* PUSH general purpose registers. */
-//	SWI		R16, R1, 0x40		/* PUSH general purpose registers. */
+	SWI		R16, R1, 0x40		/* PUSH general purpose registers. */
 	SWI		R15, R1, 0x3C		/* PUSH general purpose registers. */
 	SWI		R14, R1, 0x38		/* PUSH general purpose registers. */
 	SWI		R13, R1, 0x34		/* PUSH general purpose registers. */
@@ -65,9 +71,15 @@ _interrupt_handler:
 	SWI		R3,  R1, 0x0C		/* PUSH general purpose registers. */
 	SWI		R2,  R1, 0x08		/* PUSH general purpose registers. */
 
+#if defined (MICROBLAZE_HAS_FPU)
+	MFS		R2, RFSR			/* Get  RFSR  */
+	SWI		R2, R1, 0x04		/* PUSH RFSR */
+#endif
+
 	MFS		R3, RMSR			/* Get RMSR. */
 	ORI		R3, R3,	0x02		/* Set EI so that restore will know what to to. */
 	SWI		R3, R1, 0x00		/* PUSH RMSR */
+
 	// ANDNI	R3,  R3,  0x02			/* Disable interrupts (clear IE). */
 	LWI		R3, R0, RTOS		/* The address of the RTOS structure.*/
 	SW		R1, R3, R0		/* The first field in the task structure is the stack pointer. */
@@ -92,7 +104,7 @@ rtos_restore_context:
 	LWI		R19, R1, 0x4C		/* POP general purpose registers. */
 	LWI		R18, R1, 0x48		/* POP general purpose registers. */
 	LWI		R17, R1, 0x44		/* POP general purpose registers. */
-//	LWI		R17, R1, 0x40		/* POP general purpose registers. */
+	LWI		R16, R1, 0x40		/* POP general purpose registers. */
 	LWI		R15, R1, 0x3C		/* POP general purpose registers. */
 	LWI		R14, R1, 0x38		/* POP general purpose registers. */
 	LWI		R13, R1, 0x34		/* POP general purpose registers. */
@@ -105,6 +117,11 @@ rtos_restore_context:
 	LWI		R6,  R1, 0x18		/* POP general purpose registers. */
 	LWI		R5,  R1, 0x14		/* POP general purpose registers. */
 	LWI		R4,  R1, 0x10		/* POP general purpose registers. */
+
+#if defined (MICROBLAZE_HAS_FPU)
+	LWI		R3, R1, 0x04		/* POP RFSR value from stack. */
+	MTS		RFSR,R3				/* Restore RFSR  */
+#endif
 
 	LWI		R2,  R1, 0x00		/* POP RMSR. */
 	ANDNI	R3,  R2, 0x02		/* Clear IE. */
@@ -146,7 +163,7 @@ rtos_sysrequest:
 	SWI		R19, R1, 0x4C		/* PUSH general purpose registers. */
 	SWI		R18, R1, 0x48		/* PUSH general purpose registers. */
 	SWI		R17, R1, 0x44		/* PUSH general purpose registers. */
-//	SWI		R16, R1, 0x40		/* PUSH general purpose registers. */
+	SWI		R16, R1, 0x40		/* PUSH general purpose registers. */
 	SWI		R15, R1, 0x3C		/* PUSH general purpose registers. */
 	SWI		R14, R1, 0x38		/* PUSH general purpose registers. */
 	SWI		R13, R1, 0x34		/* PUSH general purpose registers. */
@@ -161,6 +178,11 @@ rtos_sysrequest:
 	SWI		R4,  R1, 0x10		/* PUSH general purpose registers. */
 	SWI		R3,  R1, 0x0C		/* PUSH general purpose registers. */
 	SWI		R2,  R1, 0x08		/* PUSH general purpose registers. */
+
+#if defined (MICROBLAZE_HAS_FPU)
+	MFS		R2, RFSR			/* Get  RFSR  */
+	SWI		R2, R1, 0x04		/* PUSH RFSR */
+#endif
 
 	MFS		R3, RMSR			/* Get RMSR. */
 	SWI		R3,  R1, 0x00		/* PUSH RMSR */
