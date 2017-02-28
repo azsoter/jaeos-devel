@@ -150,7 +150,9 @@ struct rtos_OS
 {
 #if defined(RTOS_SMP)
 	RTOS_Task     		*CurrentTasks[RTOS_SMP_CPU_CORES];	// The currently running task on each CPU.
+#if !defined(RTOS_INTERRUPT_CONTEXT_TRACKED_BY_HARDWARE_ONLY)
 	RTOS_RegUInt   		InterruptNesting[RTOS_SMP_CPU_CORES];	// Level of interrupts nested.
+#endif
 	RTOS_TaskSet		TasksAllowed[RTOS_SMP_CPU_CORES]; 	// Tasks allowed to run on this particular core.
 	RTOS_CpuMutex		OSLock;					// Global lock to prevent access of OS structures from other CPUs.
 	RTOS_TaskSet    	RunningTasks;				// Tasks that are currently running on any CPU.
@@ -158,7 +160,9 @@ struct rtos_OS
 	RTOS_CpuMask		CpuHoldingPen;				// CPUs in a 'holding pen' (CPU's not running any task).
 #else
 	RTOS_Task     		*CurrentTask;				// The currently running task.
+#if !defined(RTOS_INTERRUPT_CONTEXT_TRACKED_BY_HARDWARE_ONLY)
 	RTOS_RegUInt   		InterruptNesting;			// Level of interrupts nested.
+#endif
 #endif
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	RTOS_RegUInt		SchedulerLocked;			// Is the scheduler locked.
@@ -260,6 +264,7 @@ RTOS_TARGET_SPECIFIC_TASK_DATA
 
 #include <rtos_target.h>
 
+#if !defined(RTOS_INTERRUPT_CONTEXT_TRACKED_BY_HARDWARE_ONLY)
 #if !defined(RTOS_IsInsideIsr)
 #if defined(RTOS_SMP)
 // For bring up only.
@@ -268,6 +273,36 @@ RTOS_TARGET_SPECIFIC_TASK_DATA
 #else
 #define RTOS_IsInsideIsr() (0 != RTOS.InterruptNesting)
 #endif
+#endif
+#endif
+
+// For most targets, especially the ones that have an common entry point to interrupts we just
+// invoke the scheduler before each return.
+// Other targets have multiple entry points for interrupts and need to invoke the scheduler explicitly
+// if needed.
+#if defined(RTOS_SIGNAL_SCHEDULER_FROM_INTERRUPT)
+
+#define RTOS_REQUEST_RESCHEDULING() 			\
+if (!RTOS_SchedulerIsLocked())					\
+{ 												\
+	if (!RTOS_IsInsideIsr())					\
+	{											\
+		RTOS_INVOKE_SCHEDULER(); 				\
+	}											\
+	else										\
+	{											\
+		RTOS_SIGNAL_SCHEDULER_FROM_INTERRUPT();	\
+	}											\
+}
+
+#else
+
+#define RTOS_REQUEST_RESCHEDULING() 						\
+if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))	\
+{															\
+		RTOS_INVOKE_SCHEDULER();							\
+}
+
 #endif
 
 #if !defined(RTOS_TICKS_PER_SECOND)

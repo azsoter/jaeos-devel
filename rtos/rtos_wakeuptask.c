@@ -47,10 +47,7 @@ RTOS_RegInt RTOS_WakeupTask(RTOS_Task *task)
 	result = rtos_WakeupTask(task);
 	RTOS_ExitCriticalSection(saved_state);
 
-    	if (!RTOS_IsInsideIsr() && !RTOS_SchedulerIsLocked())
-    	{
-		RTOS_INVOKE_SCHEDULER();
-	}
+	RTOS_REQUEST_RESCHEDULING();
 
 	return result;
 }

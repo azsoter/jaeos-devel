@@ -1,8 +1,5 @@
-#ifndef UTILITY_H
-#define UTILITY_H
-
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +21,13 @@
 *
 */
 
-extern void PrintHex(uint32_t x);
-extern void PrintHexNoCr(uint32_t x);
+#include <rtos_utils.h>
+#include <rtos.h>
 
-extern void PrintUnsignedDecimal(uint32_t x);
-
-#endif
+void RTOS_msSleep(uint32_t ms)
+{
+	RTOS_Time ticks;
+	ticks =  RTOS_MS_TO_TICKS(ms);
+	RTOS_Delay(ticks);
+}
 

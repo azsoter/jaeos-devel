@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2016.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -106,10 +106,7 @@ RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event)
 	result = rtos_SignalEvent(event);
 	RTOS_ExitCriticalSection(saved_state);
 
-	if (!RTOS_IsInsideIsr() && !RTOS_SchedulerIsLocked())
-	{
-		RTOS_INVOKE_SCHEDULER();
-	}
+	RTOS_REQUEST_RESCHEDULING();
 
 	return result;
 }

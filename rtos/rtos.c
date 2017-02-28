@@ -747,10 +747,7 @@ RTOS_RegInt RTOS_ResumeTask(RTOS_Task *task)
 
 	RTOS_ExitCriticalSection(saved_state);
 
-    	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
-    	{
-		RTOS_INVOKE_SCHEDULER();
-	}
+	 RTOS_REQUEST_RESCHEDULING();
 
 	return result;
 }

@@ -162,6 +162,7 @@ void rtos_debug_PrintOS(void)
 
 	rtos_debug_PrintStr("\nRTOS:\n");
 
+#if !defined(RTOS_INTERRUPT_CONTEXT_TRACKED_BY_HARDWARE_ONLY)
 	rtos_debug_PrintStrPadded("RTOS.InterruptNesting:",RTOS_FIELD_WIDTH);
 
 #if defined(RTOS_SMP)
@@ -173,6 +174,8 @@ void rtos_debug_PrintOS(void)
 #else
 	rtos_debug_PrintHex(RTOS.InterruptNesting, 1);
 #endif
+#endif
+
 #if defined(RTOS_SMP)
 	rtos_debug_PrintStrPadded("TasksAllowed:",RTOS_FIELD_WIDTH);
 	for (i = 0; i < (RTOS_SMP_CPU_CORES); i++)
