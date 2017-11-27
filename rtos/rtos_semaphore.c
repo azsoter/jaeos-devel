@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -85,9 +85,7 @@ RTOS_RegInt RTOS_PostSemaphore(RTOS_Semaphore *semaphore)
 
 RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
 {
-    	RTOS_RegInt result;
 	volatile RTOS_Task *thisTask;
-	RTOS_RegInt status;
 	RTOS_SavedCriticalState(saved_state);
 
 #if defined(RTOS_USE_ASSERTS)
@@ -122,26 +120,17 @@ RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
 
 	if (0 == timeout)
 	{
-		thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-    		RTOS_ExitCriticalSection(saved_state);
-    		return RTOS_TIMED_OUT;
+    	RTOS_ExitCriticalSection(saved_state);
+    	return RTOS_TIMED_OUT;
 	}
  
-    	rtos_WaitForEvent(&(semaphore->Event), thisTask, timeout);
+    rtos_WaitForEvent(&(semaphore->Event), thisTask, timeout);
 
-    	RTOS_ExitCriticalSection(saved_state);
+    RTOS_ExitCriticalSection(saved_state);
 
-    	RTOS_INVOKE_SCHEDULER();
+    RTOS_INVOKE_SCHEDULER();
 
-    	RTOS_EnterCriticalSection(saved_state);
-
-	status = thisTask->Status;
-
-	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-
-    	RTOS_ExitCriticalSection(saved_state);
-
-	return rtos_MapStatusToReturnValue(status);
+    return thisTask->CrossContextReturnValue;
 }
 
 RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore)

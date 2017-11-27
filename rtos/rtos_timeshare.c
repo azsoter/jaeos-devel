@@ -2,7 +2,7 @@
 #include <rtos_internals.h>
 
 /*
-* Copyright (c) Andras Zsoter 2014-2016.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -147,7 +147,6 @@ void rtos_PreemptTask(RTOS_Task *task)
 	{
 		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
 		RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, task->Priority);
-		task->Status |= RTOS_TASK_STATUS_PREEMPTED_FLAG;
 		rtos_AppendTaskToDLList(&(RTOS.PreemptedList), task);
 	}
 }
@@ -173,7 +172,6 @@ void rtos_SchedulePeer(void)
 			RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, task->Priority);
 			task->TicksToRun = task->TimeSliceTicks;
 			task->TimeWatermark = RTOS.Time;
-			task->Status &= ~((RTOS_RegInt)RTOS_TASK_STATUS_PREEMPTED_FLAG);
 		}
 	}
 }

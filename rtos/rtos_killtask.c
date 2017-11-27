@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2015-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -42,16 +42,19 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 	}
 #endif
 
+#if 0
+	// Should there be a similar check?
 	if (RTOS_TASK_STATUS_KILLED == task->Status)
 	{
 		return RTOS_OK;
 	}
+#endif
 
 	RTOS_EnterCriticalSection(saved_state);
 
 	currentTask = RTOS_CURRENT_TASK();
 
-    	if (task == currentTask)
+    if (task == currentTask)
 	{
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
     		if (RTOS_SchedulerIsLocked())
@@ -81,10 +84,8 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 #endif
 
 #if defined(RTOS_SUPPORT_SLEEP)
-	if ((RTOS_TASK_STATUS_WAITING == task->Status) || (RTOS_TASK_STATUS_SLEEPING == task->Status))
-	{
-		rtos_WakeupTask(task);
-	}
+	// This will fail is the task is not actually sleeping or waiting, but that is OK.
+	rtos_WakeupTask(task);
 #endif
 
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
@@ -121,8 +122,6 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 		rtos_RestrictPriorityToCpus(priority, (RTOS_CpuMask)0);
 #endif
 		RTOS.TaskList[priority] = 0;
-		task->Status = RTOS_TASK_STATUS_KILLED;
-
 	}
 
 	RTOS_ExitCriticalSection(saved_state);

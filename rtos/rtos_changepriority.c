@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -134,8 +134,8 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriorit
 
 	RTOS_ExitCriticalSection(saved_state);
 
-    	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
-    	{
+    if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
+    {
 		RTOS_INVOKE_SCHEDULER();
 	}
 	

@@ -1,7 +1,7 @@
 #ifndef RTOS_INTERNALS_H
 #define RTOS_INTERNALS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2016.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -52,21 +52,6 @@ extern void rtos_TargetInitializeTask(RTOS_Task *task, unsigned long stackCapaci
 // Initialization.
 extern RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param);
 extern RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority);
-
-// Internal task states.
-#define RTOS_TASK_STATUS_ACTIVE		 ((RTOS_RegInt)0)
-#define RTOS_TASK_STATUS_WAITING	 ((RTOS_RegInt)1)
-#define RTOS_TASK_STATUS_SLEEPING	 ((RTOS_RegInt)2)
-#define RTOS_TASK_STATUS_TIMED_OUT 	 ((RTOS_RegInt)3)
-#define RTOS_TASK_STATUS_AWAKENED	 ((RTOS_RegInt)4)
-#define RTOS_TASK_STATUS_PREEMPTED_FLAG	 ((RTOS_RegInt)0x40)
-#define RTOS_TASK_STATUS_SUSPENDED_FLAG	 ((RTOS_RegInt)0x80)
-// #define RTOS_TASK_STATUS_STOPPED	 ((RTOS_RegInt)0x07)	  
-#define RTOS_TASK_STATUS_KILLED 	 ((RTOS_RegInt)0x0F)
-
-#if defined(RTOS_SUPPORT_EVENTS)
-extern RTOS_RegInt rtos_MapStatusToReturnValue(RTOS_RegInt status);
-#endif
 
 #if defined(RTOS_INCLUDE_WAKEUP)
 extern RTOS_RegInt rtos_WakeupTask(RTOS_Task *task);

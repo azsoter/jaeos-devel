@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2015-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -60,11 +60,11 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 	RTOS_EnterCriticalSection(saved_state);
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
-    	if (RTOS_SchedulerIsLocked())
-    	{
+    if (RTOS_SchedulerIsLocked())
+    {
 		RTOS_ExitCriticalSection(saved_state);
-        	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
-    	}
+        return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+    }
 #endif
 
 	thisTask = RTOS_CURRENT_TASK();
@@ -75,15 +75,7 @@ RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 
 	RTOS_INVOKE_SCHEDULER();
 
-	RTOS_EnterCriticalSection(saved_state);
-
-	status = thisTask->Status;
-	
-	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-
-    	RTOS_ExitCriticalSection(saved_state);
-
-	return rtos_MapStatusToReturnValue(status);
+	return thisTask->CrossContextReturnValue;
 }
 
 RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event)

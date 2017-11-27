@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2015-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -74,17 +74,14 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 #endif
 
 #if defined(RTOS_SUPPORT_SLEEP)
-	if ((RTOS_TASK_STATUS_WAITING == task->Status) || (RTOS_TASK_STATUS_SLEEPING == task->Status))
-	{
-		rtos_WakeupTask(task);
-	}
+	// This will fail is the task is not actually sleeping or waiting, but that is OK.
+	rtos_WakeupTask(task);
 #endif
 
 	if (RTOS_TaskSet_IsMember(RTOS.ReadyToRunTasks, priority))
 	{
 		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, priority);
 		RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, priority);
-		task->Status |= RTOS_TASK_STATUS_SUSPENDED_FLAG;
 		result = RTOS_OK;
 	}
 
@@ -93,7 +90,6 @@ RTOS_RegInt RTOS_SuspendTask(RTOS_Task *task)
 	{
 		RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, priority);
 		RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, priority);
-		task->Status = (task->Status & ~(RTOS_TASK_STATUS_PREEMPTED_FLAG)) | RTOS_TASK_STATUS_SUSPENDED_FLAG;
 		rtos_RemoveTaskFromDLList(&(RTOS.PreemptedList), task);
 		result = RTOS_OK;
 	}

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2016.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -188,7 +188,7 @@ RTOS_RegInt RTOS_KillSelf(void)
 	RTOS_ASSERT(!RTOS_SchedulerIsLocked());
 #endif
 
-    	if (RTOS_IsInsideIsr())
+    if (RTOS_IsInsideIsr())
 	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	} 
@@ -199,7 +199,7 @@ RTOS_RegInt RTOS_KillSelf(void)
 	if (RTOS_SchedulerIsLocked())
 	{
 		RTOS_ExitCriticalSection(saved_state);
-        	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+        return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 #endif
 
@@ -222,18 +222,16 @@ RTOS_RegInt RTOS_KillSelf(void)
 
 	// Remove task from the list of valid tasks and mark it as killed.
 	RTOS.TaskList[priority] = 0;
-	task->Status = RTOS_TASK_STATUS_KILLED;
 
 	RTOS_INVOKE_SCHEDULER();
 
 	RTOS_ExitCriticalSection(saved_state); 	// Not reachable, but pacifies GCC.
-	return RTOS_ERROR_FAILED;		// Not actually reachable.
+	return RTOS_ERROR_FAILED;				// Not actually reachable.
 }
 
 void rtos_RunTask(void)
 {
 	volatile RTOS_Task *thisTask;
-	RTOS_TaskPriority priority;
 
 	RTOS_SavedCriticalState(saved_state);
 
@@ -445,6 +443,27 @@ RTOS_INLINE void rtos_RemoveFromSleepers(RTOS_Task *task)
 {
 	RTOS.Sleepers[task->Priority] = 0;
 }
+
+RTOS_INLINE RTOS_RegInt rtos_isSleeping(const RTOS_Task *task)
+{
+	return (RTOS.Sleepers[task->Priority] == task);
+}
+#else
+#define rtos_isSleeping(TASK) 0
+#endif
+
+#if defined(RTOS_SUPPORT_EVENTS)
+RTOS_INLINE RTOS_RegInt rtos_isWaiting(const RTOS_Task *task)
+{
+	if (0 == task->WaitFor)
+	{
+		return 0;
+	}
+
+	return RTOS_TaskSet_IsMember(task->WaitFor->TasksWaiting, task->Priority);
+}
+#else
+#define rtos_isWaiting(TASK) 0
 #endif
 
 #if defined(RTOS_INCLUDE_DELAY)
@@ -452,7 +471,7 @@ RTOS_INLINE void rtos_RemoveFromSleepers(RTOS_Task *task)
 // The parameter absolute chooses if time is relative to the current time i.e. Delay() or absolute i.e. DelayUntil().
 RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 {
-    	RTOS_RegInt result;
+    RTOS_RegInt result;
 	volatile RTOS_Task *thisTask;
 	RTOS_SavedCriticalState(saved_state);
 
@@ -482,33 +501,26 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
     	if (RTOS_SchedulerIsLocked())
-	{
+    	{
     		RTOS_ExitCriticalSection(saved_state);
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
-	}
+    	}
 #endif
+    	thisTask->CrossContextReturnValue = RTOS_OK;
     	thisTask->WakeUpTime = absolute ? time : (RTOS.Time + time);
     	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, thisTask->Priority);
-    	thisTask->Status = RTOS_TASK_STATUS_SLEEPING;
+
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	if (thisTask->IsTimeshared)
-	{
-		thisTask->Link.Previous = 0;
-		thisTask->Link.Next = 0;
-	}
+    	if (thisTask->IsTimeshared)
+    	{
+    		thisTask->Link.Previous = 0;
+    		thisTask->Link.Next = 0;
+    	}
 #endif
-	rtos_AddToSleepers(thisTask);
+    	rtos_AddToSleepers(thisTask);
     	RTOS_ExitCriticalSection(saved_state);
     	RTOS_INVOKE_SCHEDULER();
-    	RTOS_EnterCriticalSection(saved_state);
-#if defined( RTOS_INCLUDE_WAKEUP)
-    	result = (RTOS_TASK_STATUS_AWAKENED == thisTask->Status) ? RTOS_ABORTED : RTOS_OK;
-#else
-    	result = RTOS_OK;
-#endif
-	thisTask->Status = RTOS_TASK_STATUS_ACTIVE;
-    	RTOS_ExitCriticalSection(saved_state);
-	return result;
+    	return (RTOS_TIMED_OUT == thisTask->CrossContextReturnValue) ? RTOS_OK : thisTask->CrossContextReturnValue;
 }
 
 RTOS_RegInt RTOS_DelayUntil(RTOS_Time wakeUpTime)
@@ -530,8 +542,9 @@ RTOS_RegInt RTOS_Delay(RTOS_Time ticksToSleep)
 #if defined(RTOS_SUPPORT_EVENTS)
 void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeout)
 {
-        task->WaitFor = event;
-        RTOS_TaskSet_AddMember(event->TasksWaiting, task->Priority);
+	task->CrossContextReturnValue = RTOS_OK;
+    task->WaitFor = event;
+    RTOS_TaskSet_AddMember(event->TasksWaiting, task->Priority);
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	if (task->IsTimeshared)
 	{
@@ -539,14 +552,13 @@ void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeo
 	}
 #endif
 
-        RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
-	task->Status = RTOS_TASK_STATUS_WAITING;
+    RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
 
-        if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
-        {
-		task->WakeUpTime = RTOS.Time + timeout;
+    if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
+    {
+    	task->WakeUpTime = RTOS.Time + timeout;
 		rtos_AddToSleepers(task);
-        }
+     }
 }
 
 RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task)
@@ -556,7 +568,7 @@ RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task
 		return;
 	}
 
-        RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority);
+    RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	rtos_RemoveTaskFromDLList(&(event->WaitList), task);
@@ -603,25 +615,12 @@ RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 			task->WaitFor = 0;
 			rtos_RemoveFromSleepers(task);
 			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
-			task->Status = RTOS_TASK_STATUS_ACTIVE;
 			return RTOS_OK;
 		}
 	}
 
 	return RTOS_TIMED_OUT;
 }
-
-// Mapping task status after waking up from an event to a return value.
-// Should this be moved to a #define macro?
-RTOS_RegInt rtos_MapStatusToReturnValue(RTOS_RegInt status)
-{
-#if defined( RTOS_INCLUDE_WAKEUP)
-    	return (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : ((RTOS_TASK_STATUS_AWAKENED == status) ? RTOS_ABORTED : RTOS_OK);
-#else
-    	return (RTOS_TASK_STATUS_TIMED_OUT == status) ? RTOS_TIMED_OUT : RTOS_OK;
-#endif
-}
-
 #endif
 
 #if defined(RTOS_SUPPORT_EVENTS)
@@ -656,7 +655,8 @@ RTOS_RegInt rtos_WakeupTask(RTOS_Task *task)
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 
-	if ((RTOS_TASK_STATUS_WAITING != task->Status) && (RTOS_TASK_STATUS_SLEEPING != task->Status))
+	// if ((RTOS_TASK_STATUS_WAITING != task->Status) && (RTOS_TASK_STATUS_SLEEPING != task->Status))
+	if (!rtos_isSleeping(task) && (!rtos_isWaiting(task)))
 	{
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
@@ -669,7 +669,7 @@ RTOS_RegInt rtos_WakeupTask(RTOS_Task *task)
 	rtos_RemoveFromSleepers(task);
 	RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
 
-	task->Status = RTOS_TASK_STATUS_AWAKENED;
+	task->CrossContextReturnValue = RTOS_ABORTED;
 
 	return RTOS_OK;
 }
@@ -707,7 +707,6 @@ RTOS_RegInt RTOS_SuspendSelf(void)
 
 	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, priority);
 	RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, priority);
-	task->Status |= RTOS_TASK_STATUS_SUSPENDED_FLAG;
 
 	RTOS_ExitCriticalSection(saved_state);
 
@@ -741,13 +740,12 @@ RTOS_RegInt RTOS_ResumeTask(RTOS_Task *task)
 	{
 		RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, task->Priority);
 		RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
-		task->Status &= ~(RTOS_TASK_STATUS_SUSPENDED_FLAG);
 		result = RTOS_OK;
 	}
 
 	RTOS_ExitCriticalSection(saved_state);
 
-	 RTOS_REQUEST_RESCHEDULING();
+	RTOS_REQUEST_RESCHEDULING();
 
 	return result;
 }
@@ -786,9 +784,9 @@ static void rtos_TimerTickFunction(void)
 				}
 
 				RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, i);
-				task->Status = RTOS_TASK_STATUS_TIMED_OUT;
+				task->CrossContextReturnValue = RTOS_TIMED_OUT;
 			}
-       		}
+       	}
 #if defined(RTOS_USE_TIMER_TASK)
 		RTOS_ExitCriticalSection(saved_state);
 #endif

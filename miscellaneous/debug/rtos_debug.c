@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2016.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -133,7 +133,7 @@ void rtos_debug_PrintTask(const RTOS_Task *task)
 #if defined(RTOS_SMP)
 	rtos_debug_PrintStrPadded("Cpu:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->Cpu, 1);
 #endif
-	rtos_debug_PrintStrPadded("Status:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->Status, 1);
+	rtos_debug_PrintStrPadded("CrossContextReturnValue:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->CrossContextReturnValue, 1);
 #if defined(RTOS_TARGET_SPECIFIC_TASK_DATA)
 //	RTOS_TARGET_SPECIFIC_TASK_DATA
 #endif

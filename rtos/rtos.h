@@ -1,7 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2016.
+* Copyright (c) Andras Zsoter 2014-2017.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -75,13 +75,13 @@ extern "C" {
 #include <rtos_types.h>
 
 // Status Codes:
-#define RTOS_ABORTED       			 2	
+#define RTOS_ABORTED       			 			 2
 #define RTOS_TIMED_OUT                         	 1
 #define RTOS_OK                                	 0
-#define RTOS_ERROR_FAILED			-1
+#define RTOS_ERROR_FAILED						-1
 #define RTOS_ERROR_OPERATION_NOT_PERMITTED     	-2
-#define RTOS_ERROR_PRIORITY_IN_USE       	-3
-#define RTOS_ERROR_OVERFLOW			-4
+#define RTOS_ERROR_PRIORITY_IN_USE       		-3
+#define RTOS_ERROR_OVERFLOW						-4
 
 #define RTOS_Priority_Idle			0
 
@@ -167,8 +167,8 @@ struct rtos_OS
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 	RTOS_RegUInt		SchedulerLocked;			// Is the scheduler locked.
 #endif
-	RTOS_RegInt		IsRunning;				// Is the OS running?
-	RTOS_Time		Time;					// System time in ticks.
+	RTOS_RegInt			IsRunning;					// Is the OS running?
+	RTOS_Time			Time;						// System time in ticks.
 	RTOS_TaskSet    	ReadyToRunTasks;			// Tasks that are ready to run.
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 	RTOS_TaskSet		SuspendedTasks;				// Suspended tasks.
@@ -214,7 +214,7 @@ struct rtos_EventHandle
 
 typedef unsigned int RTOS_SemaphoreCount;
 
-// A counting sempahore.
+// A counting semaphore.
 struct rtos_Semaphore
 {
 	RTOS_EventHandle	Event;		// A generic 'event' structure suitable for waiting.
@@ -233,30 +233,30 @@ extern RTOS_RegInt  RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeo
 // Structure representing a thread of execution (known as a task in RTOS parlance).
 struct rtos_Task
 {
-	void                	*SP;				// Stack Pointer.
-	void                	*SP0;				// Botton of the stack  (for debugging).
+	void                *SP;				// Stack Pointer.
+	void                *SP0;				// Bottom of the stack  (for debugging).
 	RTOS_TaskPriority  	Priority;			// The tasks priority.
 	RTOS_EventHandle   	*WaitFor;			// Event the task is waiting for.
 	RTOS_Time      		WakeUpTime;			// Time when to wake up.
 	void            	(*Action)(void *);		// The main loop of the task.
 	void            	*Parameter;			// Parameter to Action().
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	RTOS_Time		TicksToRun;			// Ticks remaining from the current timeslice.
-	RTOS_Time		TimeSliceTicks;			// The length of a full time slice for this task.
-	RTOS_Time		TimeWatermark;			// A time when the task was last seen running.
+	RTOS_Time			TicksToRun;			// Ticks remaining from the current timeslice.
+	RTOS_Time			TimeSliceTicks;			// The length of a full time slice for this task.
+	RTOS_Time			TimeWatermark;			// A time when the task was last seen running.
 	RTOS_Task_DLLink	Link;
-	RTOS_RegInt		IsTimeshared;			// Is this task time sliced.
+	RTOS_RegInt			IsTimeshared;			// Is this task time sliced.
 #endif
 #if defined(RTOS_SMP)
-	RTOS_CpuId		Cpu;				// The CPU the task is running on.
+	RTOS_CpuId			Cpu;				// The CPU the task is running on.
 #endif
-	RTOS_RegInt		Status;				// Task's internal status.
+	RTOS_RegInt			CrossContextReturnValue;
 #if defined(RTOS_TARGET_SPECIFIC_TASK_DATA)
 RTOS_TARGET_SPECIFIC_TASK_DATA 
 #endif
 
 #if defined(RTOS_TASK_NAME_LENGTH)
-	char			TaskName[RTOS_TASK_NAME_LENGTH];
+	char				TaskName[RTOS_TASK_NAME_LENGTH];
 #endif
 };
 
