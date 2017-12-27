@@ -25,11 +25,10 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 
+#if defined(RTOS_INCLUDE_NAKED_EVENTS)
 RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout)
 {
-	RTOS_RegInt result;
 	volatile RTOS_Task *thisTask;
-	RTOS_RegInt status;
 	RTOS_SavedCriticalState(saved_state);
 
 #if defined(RTOS_USE_ASSERTS)
@@ -102,4 +101,5 @@ RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event)
 
 	return result;
 }
+#endif
 

@@ -25,7 +25,7 @@
 #include <rtos.h>
 #include <rtos_internals.h>
 
-
+#if defined(RTOS_INCLUDE_SEMAPHORES)
 RTOS_RegInt RTOS_CreateSemaphore(RTOS_Semaphore *semaphore, RTOS_SemaphoreCount initialCount)
 {
 #if defined(RTOS_USE_ASSERTS)
@@ -151,4 +151,5 @@ RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore)
 
 	return count;
 }
+#endif
 

@@ -90,14 +90,23 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriorit
 			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, targetPriority);
 		}
 		else
-		{	
-			if ((0 != task->WaitFor) && (RTOS_TaskSet_IsMember(task->WaitFor->TasksWaiting,  oldPriority)))
+		{
+#if defined(RTOS_SUPPORT_EVENTS)
+			if (RTOS_TaskSet_IsMember(RTOS.WaitingTasks,  oldPriority))
 			{
-				RTOS_TaskSet_RemoveMember(task->WaitFor->TasksWaiting, oldPriority);
-				RTOS_TaskSet_AddMember(task->WaitFor->TasksWaiting, targetPriority);
+				RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, oldPriority);
+				RTOS_TaskSet_AddMember(RTOS.WaitingTasks, targetPriority);
+
+				// If we are here, this should always be true.
+				if ((0 != task->WaitFor) && (RTOS_TaskSet_IsMember(task->WaitFor->TasksWaiting,  oldPriority)))
+				{
+					RTOS_TaskSet_RemoveMember(task->WaitFor->TasksWaiting, oldPriority);
+					RTOS_TaskSet_AddMember(task->WaitFor->TasksWaiting, targetPriority);
+				}
 			}
+#endif
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-			else if (RTOS_TaskSet_IsMember(RTOS.SuspendedTasks,  oldPriority))
+			if (RTOS_TaskSet_IsMember(RTOS.SuspendedTasks,  oldPriority))
 			{
 				RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, oldPriority);
 				RTOS_TaskSet_AddMember(RTOS.SuspendedTasks, targetPriority);

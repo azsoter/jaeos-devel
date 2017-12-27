@@ -170,6 +170,9 @@ struct rtos_OS
 	RTOS_RegInt			IsRunning;					// Is the OS running?
 	RTOS_Time			Time;						// System time in ticks.
 	RTOS_TaskSet    	ReadyToRunTasks;			// Tasks that are ready to run.
+#if defined(RTOS_SUPPORT_EVENTS)
+	RTOS_TaskSet        WaitingTasks;				// Tasks waiting for an event.
+#endif
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 	RTOS_TaskSet		SuspendedTasks;				// Suspended tasks.
 #endif
@@ -236,7 +239,9 @@ struct rtos_Task
 	void                *SP;				// Stack Pointer.
 	void                *SP0;				// Bottom of the stack  (for debugging).
 	RTOS_TaskPriority  	Priority;			// The tasks priority.
+#if defined(RTOS_SUPPORT_EVENTS)
 	RTOS_EventHandle   	*WaitFor;			// Event the task is waiting for.
+#endif
 	RTOS_Time      		WakeUpTime;			// Time when to wake up.
 	void            	(*Action)(void *);		// The main loop of the task.
 	void            	*Parameter;			// Parameter to Action().

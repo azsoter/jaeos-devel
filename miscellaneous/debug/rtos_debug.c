@@ -114,7 +114,9 @@ void rtos_debug_PrintTask(const RTOS_Task *task)
 	rtos_debug_PrintStrPadded("SP0:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex((uint32_t)(task->SP0), 1);
 	rtos_debug_PrintStrPadded("Priority:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->Priority, 1);
 
+#if defined(RTOS_SUPPORT_EVENTS)
 	rtos_debug_PrintStrPadded("WaitFor:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex((uint32_t)(task->WaitFor), 1);
+#endif
 	rtos_debug_PrintStrPadded("WakeUpTime:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(task->WakeUpTime, 1);
 
 
@@ -195,7 +197,9 @@ void rtos_debug_PrintOS(void)
 //	RTOS_RegInt			IsRunning;								// Is the OS running?
 	rtos_debug_PrintStrPadded("Time:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.Time, 1);
 	rtos_debug_PrintStrPadded("ReadyToRunTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.ReadyToRunTasks, 1);
-
+#if defined(RTOS_SUPPORT_EVENTS)
+	rtos_debug_PrintStrPadded("WaitingTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.WaitingTasks, 1);
+#endif
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 //	RTOS_TaskSet		SuspendedTasks;							// Suspended tasks.
 #endif

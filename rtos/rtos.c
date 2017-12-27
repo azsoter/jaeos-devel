@@ -29,8 +29,6 @@ volatile RTOS_OS RTOS;
 
 RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapacity, void (*f)(void *), void *param)
 {
-	RTOS_RegInt i;
-
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != task);
 #endif
@@ -455,12 +453,7 @@ RTOS_INLINE RTOS_RegInt rtos_isSleeping(const RTOS_Task *task)
 #if defined(RTOS_SUPPORT_EVENTS)
 RTOS_INLINE RTOS_RegInt rtos_isWaiting(const RTOS_Task *task)
 {
-	if (0 == task->WaitFor)
-	{
-		return 0;
-	}
-
-	return RTOS_TaskSet_IsMember(task->WaitFor->TasksWaiting, task->Priority);
+	return RTOS_TaskSet_IsMember(RTOS.WaitingTasks, task->Priority);
 }
 #else
 #define rtos_isWaiting(TASK) 0
@@ -471,7 +464,6 @@ RTOS_INLINE RTOS_RegInt rtos_isWaiting(const RTOS_Task *task)
 // The parameter absolute chooses if time is relative to the current time i.e. Delay() or absolute i.e. DelayUntil().
 RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
 {
-    RTOS_RegInt result;
 	volatile RTOS_Task *thisTask;
 	RTOS_SavedCriticalState(saved_state);
 
@@ -551,8 +543,8 @@ void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeo
 		rtos_AppendTaskToDLList(&(event->WaitList), task);
 	}
 #endif
-
     RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
+    RTOS_TaskSet_AddMember(RTOS.WaitingTasks, task->Priority);
 
     if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
     {
@@ -569,6 +561,7 @@ RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task
 	}
 
     RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority);
+    RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, task->Priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	rtos_RemoveTaskFromDLList(&(event->WaitList), task);
@@ -614,6 +607,7 @@ RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 			RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority); 
 			task->WaitFor = 0;
 			rtos_RemoveFromSleepers(task);
+			RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, task->Priority);
 			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
 			return RTOS_OK;
 		}
@@ -661,10 +655,12 @@ RTOS_RegInt rtos_WakeupTask(RTOS_Task *task)
         	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 
+#if defined(RTOS_SUPPORT_EVENTS)
 	if (0 != task->WaitFor)
 	{
 		rtos_RemoveTaskWaiting(task->WaitFor, task);
 	}
+#endif
 
 	rtos_RemoveFromSleepers(task);
 	RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
@@ -778,11 +774,12 @@ static void rtos_TimerTickFunction(void)
 			if (task->WakeUpTime == RTOS.Time)
 			{
 				rtos_RemoveFromSleepers(task);
+#if defined(RTOS_SUPPORT_EVENTS)
 				if (0 != task->WaitFor)
-               			{
+                {
 					rtos_RemoveTaskWaiting(task->WaitFor, task);
 				}
-
+#endif
 				RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, i);
 				task->CrossContextReturnValue = RTOS_TIMED_OUT;
 			}
