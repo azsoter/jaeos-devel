@@ -2,7 +2,7 @@
 #include <rtos_internals.h>
 
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2014-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -138,15 +138,19 @@ RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, const char *name, RTOS_Tas
 // Unschedule the task whose and place it on the list of the tasks whose time slice has expired.
 void rtos_PreemptTask(RTOS_Task *task)
 {
+	RTOS_TaskPriority priority;
+
 	if (RTOS_SchedulerIsLocked())
 	{
 		return;
 	}
 
-	if (RTOS_TaskSet_IsMember(RTOS.ReadyToRunTasks, task->Priority))
+	priority = task->Priority;
+
+	if (RTOS_TaskSet_IsMember(RTOS.ReadyToRunTasks, priority))
 	{
-		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
-		RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, task->Priority);
+		RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, priority);
+		RTOS_TaskSet_AddMember(RTOS.PreemptedTasks, priority);
 		rtos_AppendTaskToDLList(&(RTOS.PreemptedList), task);
 	}
 }
@@ -157,6 +161,7 @@ void rtos_SchedulePeer(void)
 {
 	RTOS_Task *task;
 	RTOS_TaskSet peersRunning;
+	RTOS_TaskPriority priority;
 	peersRunning = RTOS_TaskSet_Intersection(RTOS.ReadyToRunTasks, RTOS.TimeshareTasks);
 
 #if defined(RTOS_SMP)
@@ -166,10 +171,12 @@ void rtos_SchedulePeer(void)
 #endif
 	{
 		task = rtos_RemoveFirstTaskFromDLList(&(RTOS.PreemptedList));
+
 		if (0 != task)
 		{
-			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
-			RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, task->Priority);
+			priority = task->Priority;
+			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
+			RTOS_TaskSet_RemoveMember(RTOS.PreemptedTasks, priority);
 			task->TicksToRun = task->TimeSliceTicks;
 			task->TimeWatermark = RTOS.Time;
 		}

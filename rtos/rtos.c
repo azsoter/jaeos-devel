@@ -92,7 +92,7 @@ RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority)
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	if (task->IsTimeshared)
 	{
-		RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, task->Priority);
+		RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, priority);
 	}
 #endif
 
@@ -539,17 +539,18 @@ RTOS_RegInt RTOS_Delay(RTOS_Time ticksToSleep)
 #if defined(RTOS_SUPPORT_EVENTS)
 void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeout)
 {
+	RTOS_TaskPriority priority = task->Priority;
 	task->CrossContextReturnValue = RTOS_OK;
     task->WaitFor = event;
-    RTOS_TaskSet_AddMember(event->TasksWaiting, task->Priority);
+    RTOS_TaskSet_AddMember(event->TasksWaiting, priority);
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	if (task->IsTimeshared)
 	{
 		rtos_AppendTaskToDLList(&(event->WaitList), task);
 	}
 #endif
-    RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, task->Priority);
-    RTOS_TaskSet_AddMember(RTOS.WaitingTasks, task->Priority);
+    RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, priority);
+    RTOS_TaskSet_AddMember(RTOS.WaitingTasks, priority);
 
     if ((0 != timeout) && ((RTOS_TIMEOUT_FOREVER) != timeout))
     {
@@ -560,13 +561,16 @@ void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeo
 
 RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task)
 {
+	RTOS_TaskPriority priority;
+
 	if (0 == task)
 	{
 		return;
 	}
 
-    RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority);
-    RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, task->Priority);
+	priority = task->Priority;
+    RTOS_TaskSet_RemoveMember(event->TasksWaiting, priority);
+    RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
 	rtos_RemoveTaskFromDLList(&(event->WaitList), task);
@@ -598,6 +602,7 @@ RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 		if (RTOS_TaskSet_IsMember(RTOS.TimeshareTasks, priority))
 		{
 			task = rtos_GetFirstWaitingTask(event);
+			priority = task->Priority;
 		}
 		else
 		{
@@ -609,11 +614,11 @@ RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 #endif
 		if (0 != task)
 		{
-			RTOS_TaskSet_RemoveMember(event->TasksWaiting, task->Priority); 
+			RTOS_TaskSet_RemoveMember(event->TasksWaiting, priority);
 			task->WaitFor = 0;
 			rtos_RemoveFromSleepers(task);
-			RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, task->Priority);
-			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
+			RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, priority);
+			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
 			return RTOS_OK;
 		}
 	}
@@ -719,6 +724,7 @@ RTOS_RegInt RTOS_SuspendSelf(void)
 RTOS_RegInt RTOS_ResumeTask(RTOS_Task *task)
 {
 	RTOS_RegInt result;
+	RTOS_TaskPriority priority;
 	RTOS_SavedCriticalState(saved_state);
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != task);
@@ -732,15 +738,18 @@ RTOS_RegInt RTOS_ResumeTask(RTOS_Task *task)
 #endif
 
 	RTOS_EnterCriticalSection(saved_state);
-	if (!RTOS_TaskSet_IsMember(RTOS.SuspendedTasks, task->Priority))
+
+	priority = task->Priority;
+
+	if (!RTOS_TaskSet_IsMember(RTOS.SuspendedTasks, priority))
 	{
 	
 		result = RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 	else
 	{
-		RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, task->Priority);
-		RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, task->Priority);
+		RTOS_TaskSet_RemoveMember(RTOS.SuspendedTasks, priority);
+		RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
 		result = RTOS_OK;
 	}
 
@@ -766,8 +775,8 @@ static void rtos_TimerTickFunction(void)
 #endif
 
 	// The Idle task should never actually sleep!
-	// We can start checking at priority 1 instead of 0.
-	for (i = 1; i <= RTOS_Priority_Highest; i++)
+	// Check only between 1 ... RTOS_Priority_Highest.
+	for (i = RTOS_Priority_Highest; 0 != i; i--)
 	{
 #if defined(RTOS_USE_TIMER_TASK)
 		RTOS_EnterCriticalSection(saved_state);
