@@ -1,7 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2014-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -173,6 +173,9 @@ struct rtos_OS
 #if defined(RTOS_SUPPORT_EVENTS)
 	RTOS_TaskSet        WaitingTasks;				// Tasks waiting for an event.
 #endif
+#if defined(RTOS_SUPPORT_SLEEP)
+	RTOS_TaskSet     	SleepingTasks;
+#endif
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
 	RTOS_TaskSet		SuspendedTasks;				// Suspended tasks.
 #endif
@@ -186,9 +189,6 @@ struct rtos_OS
 #endif
 #endif
 	RTOS_Task     		*TaskList[(RTOS_Priority_Highest) + 1];	// A list (really an array) of pointers to all the task structures.
-#if defined(RTOS_SUPPORT_SLEEP)
-	RTOS_Task     		*Sleepers[(RTOS_Priority_Highest) + 1]; // All the sleeping tasks.
-#endif
 };
 
 typedef volatile struct rtos_OS RTOS_OS;

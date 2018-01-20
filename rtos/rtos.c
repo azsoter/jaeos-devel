@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2014-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -434,17 +434,22 @@ void RTOS_SetTime(RTOS_Time time)
 #if defined(RTOS_SUPPORT_SLEEP)
 RTOS_INLINE void rtos_AddToSleepers(RTOS_Task *task)
 {
-	RTOS.Sleepers[task->Priority] = task;
+	RTOS_TaskSet_AddMember(RTOS.SleepingTasks, task->Priority);
 }
 
 RTOS_INLINE void rtos_RemoveFromSleepers(RTOS_Task *task)
 {
-	RTOS.Sleepers[task->Priority] = 0;
+	RTOS_TaskSet_RemoveMember(RTOS.SleepingTasks, task->Priority);
 }
 
 RTOS_INLINE RTOS_RegInt rtos_isSleeping(const RTOS_Task *task)
 {
-	return (RTOS.Sleepers[task->Priority] == task);
+	return RTOS_TaskSet_IsMember(RTOS.SleepingTasks, task->Priority);
+}
+
+RTOS_INLINE RTOS_RegInt rtos_isSleepingPriority(RTOS_TaskPriority priority)
+{
+	return RTOS_TaskSet_IsMember(RTOS.SleepingTasks, priority);
 }
 #else
 #define rtos_isSleeping(TASK) 0
@@ -767,23 +772,27 @@ static void rtos_TimerTickFunction(void)
 #if defined(RTOS_USE_TIMER_TASK)
 		RTOS_EnterCriticalSection(saved_state);
 #endif
-		task = RTOS.Sleepers[i];
 
-		if (0 != task)
+		if (rtos_isSleepingPriority(i))
 		{
-			if (task->WakeUpTime == RTOS.Time)
+			task = RTOS.TaskList[i];
+
+			if (0 != task)
 			{
-				rtos_RemoveFromSleepers(task);
+				if (task->WakeUpTime == RTOS.Time)
+				{
+					rtos_RemoveFromSleepers(task);
 #if defined(RTOS_SUPPORT_EVENTS)
-				if (0 != task->WaitFor)
-                {
-					rtos_RemoveTaskWaiting(task->WaitFor, task);
-				}
+					if (0 != task->WaitFor)
+					{
+						rtos_RemoveTaskWaiting(task->WaitFor, task);
+					}
 #endif
-				RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, i);
-				task->CrossContextReturnValue = RTOS_TIMED_OUT;
+					RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, i);
+					task->CrossContextReturnValue = RTOS_TIMED_OUT;
+				}
 			}
-       	}
+		}
 #if defined(RTOS_USE_TIMER_TASK)
 		RTOS_ExitCriticalSection(saved_state);
 #endif

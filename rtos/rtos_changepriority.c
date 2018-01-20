@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2017.
+* Copyright (c) Andras Zsoter 2015-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -129,10 +129,10 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriorit
 #endif
 
 #if defined(RTOS_SUPPORT_SLEEP)
-		if (task == RTOS.Sleepers[oldPriority])
+		if (RTOS_TaskSet_IsMember(RTOS.SleepingTasks,oldPriority))
 		{
-			RTOS.Sleepers[targetPriority] = task;
-			RTOS.Sleepers[oldPriority] = 0;
+			RTOS_TaskSet_RemoveMember(RTOS.SleepingTasks,oldPriority);
+			RTOS_TaskSet_AddMember(RTOS.SleepingTasks, targetPriority);
 		}
 #endif
 
