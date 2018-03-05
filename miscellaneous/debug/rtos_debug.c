@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2014-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -158,9 +158,44 @@ void rtos_debug_PrintAllTasks(void)
 
 void rtos_debug_PrintOS(void)
 {
+	RTOS_Time time;
+	RTOS_TaskSet readyToRunTasks;
+#if defined(RTOS_SUPPORT_EVENTS)
+	RTOS_TaskSet waitingTasks;
+#endif
+#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
+	RTOS_TaskSet suspendedTasks;
+#endif
+#if defined(RTOS_SUPPORT_SLEEP)
+	RTOS_TaskSet sleepingTasks;
+#endif
+#if defined(RTOS_SUPPORT_TIMESHARE)
+	RTOS_TaskSet timeShareTasks;
+	RTOS_TaskSet preemptedTasks;
+#endif
 #if defined(RTOS_SMP)
 	int i;
 #endif
+	RTOS_SavedCriticalState(saved_state);
+
+	RTOS_EnterCriticalSection(saved_state);
+	// Take a consistent snapshot of some system variables.
+	time = RTOS.Time;
+	readyToRunTasks = RTOS.ReadyToRunTasks;
+#if defined(RTOS_SUPPORT_EVENTS)
+	waitingTasks = RTOS.WaitingTasks;
+#endif
+#if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
+	suspendedTasks = RTOS.SuspendedTasks;
+#endif
+#if defined(RTOS_SUPPORT_SLEEP)
+	sleepingTasks = RTOS.SleepingTasks;
+#endif
+#if defined(RTOS_SUPPORT_TIMESHARE)
+	timeShareTasks = RTOS.TimeshareTasks;
+	preemptedTasks = RTOS.PreemptedTasks;
+#endif
+	RTOS_ExitCriticalSection(saved_state);
 
 	rtos_debug_PrintStr("\nRTOS:\n");
 
@@ -195,17 +230,17 @@ void rtos_debug_PrintOS(void)
 //	RTOS_RegUInt		SchedulerLocked;						// Is the scheduler locked.
 #endif
 //	RTOS_RegInt			IsRunning;								// Is the OS running?
-	rtos_debug_PrintStrPadded("Time:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.Time, 1);
-	rtos_debug_PrintStrPadded("ReadyToRunTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.ReadyToRunTasks, 1);
+	rtos_debug_PrintStrPadded("Time:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(time, 1);
+	rtos_debug_PrintStrPadded("ReadyToRunTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(readyToRunTasks, 1);
 #if defined(RTOS_SUPPORT_EVENTS)
-	rtos_debug_PrintStrPadded("WaitingTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.WaitingTasks, 1);
+	rtos_debug_PrintStrPadded("WaitingTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(waitingTasks, 1);
 #endif
 #if defined(RTOS_INCLUDE_SUSPEND_AND_RESUME)
-//	RTOS_TaskSet		SuspendedTasks;							// Suspended tasks.
+	rtos_debug_PrintStrPadded("SuspendedTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(suspendedTasks, 1);
 #endif
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	rtos_debug_PrintStrPadded("TimeshareTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.TimeshareTasks, 1);
-	rtos_debug_PrintStrPadded("PreemptedTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.PreemptedTasks, 1);
+	rtos_debug_PrintStrPadded("TimeshareTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(timeShareTasks, 1);
+	rtos_debug_PrintStrPadded("PreemptedTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(preemptedTasks, 1);
 //	RTOS_Task_DLList	PreemptedList;
 #if defined(RTOS_SMP)
 	rtos_debug_PrintStrPadded("TimeShareCpus:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(RTOS.TimeShareCpus, 1);
@@ -214,7 +249,7 @@ void rtos_debug_PrintOS(void)
 #endif
 //	RTOS_Task     		*TaskList[(RTOS_Priority_Highest) + 1];	// A list (really an array) of pointers to all the task structures.
 #if defined(RTOS_SUPPORT_SLEEP)
-//	RTOS_Task     		*Sleepers[(RTOS_Priority_Highest) + 1]; // All the sleeping tasks.
+	rtos_debug_PrintStrPadded("SleepingTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(sleepingTasks, 1);
 #endif
 	rtos_debug_PrintStr("CurrentTask:\n");
 #if defined(RTOS_SMP)
