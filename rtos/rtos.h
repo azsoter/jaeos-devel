@@ -352,9 +352,12 @@ extern RTOS_RegInt RTOS_DelayUntil(RTOS_Time wakeUpTime);
 extern void RTOS_YieldPriority(void);
 #endif
 
+#if defined(RTOS_INCLUDE_NAKED_EVENTS)
 extern RTOS_RegInt RTOS_CreateEventHandle(RTOS_EventHandle *event);
 extern RTOS_RegInt RTOS_WaitForEvent(RTOS_EventHandle *event, RTOS_Time timeout);
 extern RTOS_RegInt RTOS_SignalEvent(RTOS_EventHandle *event);
+extern RTOS_RegInt RTOS_BroadcastEvent(RTOS_EventHandle *event);
+#endif
 
 extern RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriority);
 

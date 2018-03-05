@@ -29,7 +29,8 @@ extern "C" {
 
 #if !defined(RTOS_TARGET_SUPPLIES_SET_OPERATIONS)
 // Operations on task sets.
-#define RTOS_TaskSet_IsEmpty(S) (0 == (S))
+#define RTOS_TaskSet_EmptySet ((RTOS_TaskSet)0)
+#define RTOS_TaskSet_IsEmpty(S) (RTOS_TaskSet_EmptySet == (S))
 #define RTOS_TaskSet_AddMember(S,I) (S |= (((RTOS_TaskSet)1) << (I)))
 #define RTOS_TaskSet_RemoveMember(S,I) (S &= ~(((RTOS_TaskSet)1) << (I)))
 #define RTOS_TaskSet_IsMember(S,I) ( 0 != (S & (((RTOS_TaskSet)1) << (I))))
