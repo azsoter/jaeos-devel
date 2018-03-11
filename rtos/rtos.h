@@ -250,7 +250,7 @@ struct rtos_Task
 	RTOS_Time			TimeSliceTicks;			// The length of a full time slice for this task.
 	RTOS_Time			TimeWatermark;			// A time when the task was last seen running.
 	RTOS_Task_DLLink	Link;
-	RTOS_RegInt			IsTimeshared;			// Is this task time sliced.
+	// RTOS_RegInt			IsTimeshared;			// Is this task time sliced.
 #endif
 #if defined(RTOS_SMP)
 	RTOS_CpuId			Cpu;				// The CPU the task is running on.

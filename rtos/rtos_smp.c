@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2016.
+* Copyright (c) Andras Zsoter 2015-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -174,7 +174,7 @@ void rtos_Scheduler(void)
 		RTOS.CurrentTasks[cpu] = task;
 		task->Cpu = cpu;
 #if defined(RTOS_SUPPORT_TIMESHARE)
-		if (task->IsTimeshared)
+		if (rtos_IsTimeSharing(priority))
 		{
 			RTOS.TimeShareCpus = RTOS_CpuMask_AddCpu(RTOS.TimeShareCpus, cpu);
 		}
@@ -244,7 +244,7 @@ void rtos_SchedulerForYield(void)
 			task->Cpu = cpu;
 			RTOS_TaskSet_AddMember(RTOS.RunningTasks, priority);
 #if defined(RTOS_SUPPORT_TIMESHARE)
-			if (task->IsTimeshared)
+			if (rtos_IsTimeSharing(priority))
 			{
 				RTOS.TimeShareCpus = RTOS_CpuMask_AddCpu(RTOS.TimeShareCpus, cpu);
 			}

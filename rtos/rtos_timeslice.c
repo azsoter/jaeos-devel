@@ -2,7 +2,7 @@
 #include <rtos_internals.h>
 
 /*
-* Copyright (c) Andras Zsoter 2016.
+* Copyright (c) Andras Zsoter 2016-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,7 @@ RTOS_RegInt RTOS_SetTimeSlice(RTOS_Task *task, RTOS_Time slice)
 	RTOS_SavedCriticalState(saved_state);
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != task);
-	RTOS_ASSERT(0 != task->IsTimeshared);
+	// RTOS_ASSERT(rtos_IsTimeSharing(task->Priority));
 #endif
 
 #if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
@@ -87,10 +87,10 @@ RTOS_RegInt RTOS_SetTimeSlice(RTOS_Task *task, RTOS_Time slice)
 		return  RTOS_ERROR_OPERATION_NOT_PERMITTED;
 	}
 
-	if (0 == task->IsTimeshared)
-	{
-		return  RTOS_ERROR_FAILED;
-	}
+//	if (!rtos_IsTimeSharing(task->Priority))
+//	{
+//		return  RTOS_ERROR_FAILED;
+//	}
 #endif
 	RTOS_EnterCriticalSection(saved_state);
 		task->TimeSliceTicks = slice;

@@ -98,9 +98,9 @@ RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list)
 // ----------
 void rtos_MakeTimeshared(RTOS_Task *task, RTOS_Time slice)
 {
-	task->IsTimeshared = 1;
 	task->TicksToRun = slice;
 	task->TimeSliceTicks = slice;
+	RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, task->Priority);
 }
 
 // This function can be called during initialization before the RTOS is fully functional.
@@ -122,8 +122,12 @@ RTOS_RegInt RTOS_CreateTimeShareTask(RTOS_Task *task, const char *name, RTOS_Tas
 
 	if (RTOS_OK == result)
 	{
-		rtos_MakeTimeshared(task, slice);
 		result = rtos_RegisterTask(task, priority);
+	}
+
+	if (RTOS_OK == result)
+	{
+		rtos_MakeTimeshared(task, slice);
 	}
 
 	if (RTOS.IsRunning)
@@ -191,13 +195,16 @@ void RTOS_YieldTimeSlice(void)
 
 	thisTask = RTOS_CURRENT_TASK();
 
-	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()) && (thisTask->IsTimeshared))
+	if ((!RTOS_IsInsideIsr()) && (!RTOS_SchedulerIsLocked()))
 	{
 		RTOS_EnterCriticalSection(saved_state);
-		if (0 != RTOS.PreemptedList.Head)
+		if (rtos_IsTimeSharing(thisTask->Priority))
 		{
-			rtos_PreemptTask(thisTask);
-			rtos_SchedulePeer();
+			if (0 != RTOS.PreemptedList.Head)
+			{
+				rtos_PreemptTask(thisTask);
+				rtos_SchedulePeer();
+			}
 		}
 		RTOS_ExitCriticalSection(saved_state);
 		RTOS_INVOKE_SCHEDULER();
@@ -217,7 +224,7 @@ void rtos_ManageTimeshared(RTOS_Task *task)
 {
 	if (task)
 	{
-		if (task->IsTimeshared)
+		if (rtos_IsTimeSharing(task->Priority))
 		{
 			rtos_DeductTick(task);
 

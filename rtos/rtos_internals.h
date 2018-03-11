@@ -1,7 +1,7 @@
 #ifndef RTOS_INTERNALS_H
 #define RTOS_INTERNALS_H
 /*
-* Copyright (c) Andras Zsoter 2014-2017.
+* Copyright (c) Andras Zsoter 2014-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -83,6 +83,8 @@ extern void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Tim
 extern void rtos_AppendTaskToDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task);
 extern void rtos_RemoveTaskFromDLList(volatile RTOS_Task_DLList *list, RTOS_Task *task);
 extern RTOS_Task *rtos_RemoveFirstTaskFromDLList(volatile RTOS_Task_DLList *list);
+
+#define rtos_IsTimeSharing(Priority) RTOS_TaskSet_IsMember(RTOS.TimeshareTasks, (Priority))
 
 extern void rtos_PreemptTask(RTOS_Task *task);
 extern void rtos_SchedulePeer(void);

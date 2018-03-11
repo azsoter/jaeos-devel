@@ -52,7 +52,6 @@ RTOS_RegInt rtos_CreateTask(RTOS_Task *task, void *sp0, unsigned long stackCapac
 	rtos_TargetInitializeTask(task, stackCapacity);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	task->IsTimeshared = 0;
 	task->TicksToRun = RTOS_TIMEOUT_FOREVER;
 	task->TimeSliceTicks = RTOS_TIMEOUT_FOREVER;
 	task->Link.Previous = 0;
@@ -87,13 +86,6 @@ RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority)
 
 #if defined(RTOS_SMP)
 	rtos_RestrictPriorityToCpus(priority, ~(RTOS_CpuMask)0);
-#endif
-
-#if defined(RTOS_SUPPORT_TIMESHARE)
-	if (task->IsTimeshared)
-	{
-		RTOS_TaskSet_AddMember(RTOS.TimeshareTasks, priority);
-	}
 #endif
 
 	RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
@@ -508,11 +500,8 @@ RTOS_RegInt rtos_Delay(RTOS_Time time, RTOS_RegInt absolute)
     	RTOS_TaskSet_RemoveMember(RTOS.ReadyToRunTasks, thisTask->Priority);
 
 #if defined(RTOS_SUPPORT_TIMESHARE)
-    	if (thisTask->IsTimeshared)
-    	{
-    		thisTask->Link.Previous = 0;
-    		thisTask->Link.Next = 0;
-    	}
+    	thisTask->Link.Previous = 0;
+    	thisTask->Link.Next = 0;
 #endif
     	rtos_AddToSleepers(thisTask);
     	RTOS_ExitCriticalSection(saved_state);
@@ -544,7 +533,7 @@ void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeo
     task->WaitFor = event;
     RTOS_TaskSet_AddMember(event->TasksWaiting, priority);
 #if defined(RTOS_SUPPORT_TIMESHARE)
-	if (task->IsTimeshared)
+	if (rtos_IsTimeSharing(priority))
 	{
 		rtos_AppendTaskToDLList(&(event->WaitList), task);
 	}
