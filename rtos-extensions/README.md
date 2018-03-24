@@ -1,7 +1,7 @@
 /rtos-extensions
 ================
 
-Practical, functional software can be created using only the features included in the _/rtos_ folder and features build on top of the
+Practical, functional software can be created using only the features included in the _/rtos_ folder and features built on top of the
 published API (such as things under _/extras_).
 
 Some programmers may like to have other features commonly found in an RTOS, which are not practical to implement on top of the API and
