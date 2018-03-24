@@ -160,6 +160,7 @@ void rtos_debug_PrintOS(void)
 {
 	RTOS_Time time;
 	RTOS_TaskSet readyToRunTasks;
+	RTOS_TaskSet prioritiesInUse;
 #if defined(RTOS_SUPPORT_EVENTS)
 	RTOS_TaskSet waitingTasks;
 #endif
@@ -182,6 +183,7 @@ void rtos_debug_PrintOS(void)
 	// Take a consistent snapshot of some system variables.
 	time = RTOS.Time;
 	readyToRunTasks = RTOS.ReadyToRunTasks;
+	prioritiesInUse = RTOS.PrioritiesInUse;
 #if defined(RTOS_SUPPORT_EVENTS)
 	waitingTasks = RTOS.WaitingTasks;
 #endif
@@ -232,6 +234,7 @@ void rtos_debug_PrintOS(void)
 //	RTOS_RegInt			IsRunning;								// Is the OS running?
 	rtos_debug_PrintStrPadded("Time:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(time, 1);
 	rtos_debug_PrintStrPadded("ReadyToRunTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(readyToRunTasks, 1);
+	rtos_debug_PrintStrPadded("PrioritiesInUse:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(prioritiesInUse, 1);
 #if defined(RTOS_SUPPORT_EVENTS)
 	rtos_debug_PrintStrPadded("WaitingTasks:",RTOS_FIELD_WIDTH); rtos_debug_PrintHex(waitingTasks, 1);
 #endif

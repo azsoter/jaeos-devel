@@ -39,7 +39,15 @@ extern "C" {
 #define RTOS_TaskSet_Difference(S1, S2) ((S1) & (~(S2))) /* Set-theoric difference AKA Relative Complement. */
 #endif
 
+#define RTOS_InvalidPriority (~((RTOS_TaskPriority)0))
+
 #define rtos_TaskFromPriority(PRIORITY) (((PRIORITY) > RTOS_Priority_Highest) ? (RTOS_Task *)0 : RTOS.TaskList[(PRIORITY)])
+
+#if defined(RTOS_FIND_HIGHEST)
+#define RTOS_GetHighestPriorityInSet(taskSet) ((RTOS_TaskSet)(RTOS_FIND_HIGHEST(taskSet)))
+#else
+#error RTOS_FIND_HIGHEST must be defined by the target port.
+#endif
 
 #if defined(RTOS_INCLUDE_SCHEDULER_LOCK)
 #define RTOS_SchedulerIsLocked() (0 != RTOS.SchedulerLocked)
@@ -75,6 +83,7 @@ extern void rtos_SchedulerForYield(void);
 extern void rtos_RunTask(void);
 
 // Only to be called by OS components.
+extern RTOS_Task *rtos_GetFirstWaitingTask(RTOS_EventHandle *event);
 extern RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event);
 extern void rtos_WaitForEvent(RTOS_EventHandle *event, RTOS_Task *task, RTOS_Time timeout);
 

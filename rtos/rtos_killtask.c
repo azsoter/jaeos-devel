@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015-2017.
+* Copyright (c) Andras Zsoter 2015-2018.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -122,6 +122,7 @@ RTOS_RegInt RTOS_KillTask(RTOS_Task *task)
 		rtos_RestrictPriorityToCpus(priority, (RTOS_CpuMask)0);
 #endif
 		RTOS.TaskList[priority] = 0;
+		RTOS_TaskSet_RemoveMember(RTOS.PrioritiesInUse, priority);
 	}
 
 	RTOS_ExitCriticalSection(saved_state);

@@ -55,14 +55,24 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriorit
 		return RTOS_OK;
 	}
 
-	if ((targetPriority > RTOS_Priority_Highest) || (RTOS_Priority_Idle == targetPriority))
+	if (RTOS_Priority_Idle == targetPriority)
 	{
 		return RTOS_ERROR_FAILED;
 	}
 
+	if (targetPriority > RTOS_Priority_Highest)
+	{
+		return RTOS_ERROR_INVALID_PRIORITY;
+	}
+
 	RTOS_EnterCriticalSection(saved_state);
 
-	if (0 != RTOS.TaskList[targetPriority])
+#if defined(RTOS_USE_ASSERTS)
+	RTOS_ASSERT(!RTOS_TaskSet_IsMember(RTOS.PrioritiesInUse, targetPriority));
+	RTOS_ASSERT((0 == RTOS.TaskList[targetPriority]));
+#endif
+
+	if ((RTOS_TaskSet_IsMember(RTOS.PrioritiesInUse, targetPriority)) || (0 != RTOS.TaskList[targetPriority]))
 	{
 		result = RTOS_ERROR_PRIORITY_IN_USE;
 	}
@@ -136,9 +146,11 @@ RTOS_RegInt RTOS_ChangePriority(RTOS_Task *task, RTOS_TaskPriority targetPriorit
 		}
 #endif
 
-		RTOS.TaskList[targetPriority] = task;
-		RTOS.TaskList[oldPriority] = 0;
 		task->Priority = targetPriority;
+		RTOS.TaskList[oldPriority] = 0;
+		RTOS.TaskList[targetPriority] = task;
+		RTOS_TaskSet_RemoveMember(RTOS.PrioritiesInUse, oldPriority);
+		RTOS_TaskSet_AddMember(RTOS.PrioritiesInUse, targetPriority);
 	}
 
 	RTOS_ExitCriticalSection(saved_state);

@@ -67,8 +67,20 @@ RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority)
 
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != task);
+	RTOS_ASSERT(priority <= (RTOS_Priority_Highest));
+	RTOS_ASSERT(!RTOS_TaskSet_IsMember(RTOS.PrioritiesInUse, priority));
 	RTOS_ASSERT(0 == RTOS.TaskList[priority]);
 #endif
+
+	if (priority > (RTOS_Priority_Highest))
+	{
+		return RTOS_ERROR_INVALID_PRIORITY;
+	}
+
+	if (RTOS_TaskSet_IsMember(RTOS.PrioritiesInUse, priority))
+	{
+		return RTOS_ERROR_PRIORITY_IN_USE;
+	}
 
 	if (0 != RTOS.TaskList[priority])
 	{
@@ -81,7 +93,7 @@ RTOS_RegInt rtos_RegisterTask(RTOS_Task *task, RTOS_TaskPriority priority)
 	}
 
 	task->Priority = priority;
-
+	RTOS_TaskSet_AddMember(RTOS.PrioritiesInUse, priority);
 	RTOS.TaskList[priority] = task;
 
 #if defined(RTOS_SMP)
@@ -212,6 +224,7 @@ RTOS_RegInt RTOS_KillSelf(void)
 
 	// Remove task from the list of valid tasks and mark it as killed.
 	RTOS.TaskList[priority] = 0;
+	RTOS_TaskSet_RemoveMember(RTOS.PrioritiesInUse, priority);
 
 	RTOS_INVOKE_SCHEDULER();
 
@@ -241,20 +254,6 @@ void rtos_RunTask(void)
 	while(1);
 	RTOS_ExitCriticalSection(saved_state); // Not reachable, but pacifies GCC.
 }
-
-#if defined(RTOS_FIND_HIGHEST)
-RTOS_TaskPriority RTOS_GetHighestPriorityInSet(RTOS_TaskSet taskSet)
-{
-	return RTOS_FIND_HIGHEST(taskSet);
-}
-#else
-#error RTOS_FIND_HIGHEST must be defined by the target port.
-#endif
-
-//RTOS_INLINE RTOS_Task *rtos_TaskFromPriority(RTOS_TaskPriority priority)
-//{
-//	return (priority > RTOS_Priority_Highest) ? 0 : RTOS.TaskList[priority];
-//}
 
 // This is an API function wrapper, do not confuse it with the internal (and much faster) macro rtos_TaskFromPriority(PRIORITY).
 RTOS_Task *RTOS_TaskFromPriority(RTOS_TaskPriority priority)
@@ -567,20 +566,10 @@ RTOS_INLINE void rtos_RemoveTaskWaiting(RTOS_EventHandle *event, RTOS_Task *task
 	task->WaitFor = 0;
 }
 
-#if defined(RTOS_SUPPORT_TIMESHARE)
-RTOS_INLINE RTOS_Task *rtos_GetFirstWaitingTask(RTOS_EventHandle *event)
-{
-	RTOS_Task *task = 0;
-
-	task = rtos_RemoveFirstTaskFromDLList(&(event->WaitList));
-	return task;
-}
-#endif
-
-RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
+RTOS_Task *rtos_GetFirstWaitingTask(RTOS_EventHandle *event)
 {
 	RTOS_TaskPriority priority;
-	RTOS_Task *task;
+	RTOS_Task *task = 0;
 
 	priority = RTOS_GetHighestPriorityInSet(event->TasksWaiting);
 
@@ -590,26 +579,37 @@ RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
 #if defined(RTOS_SUPPORT_TIMESHARE)
 		if (RTOS_TaskSet_IsMember(RTOS.TimeshareTasks, priority))
 		{
-			task = rtos_GetFirstWaitingTask(event);
+			task = rtos_RemoveFirstTaskFromDLList(&(event->WaitList));
 			priority = task->Priority;
 		}
 		else
 		{
-        		task = rtos_TaskFromPriority(priority);
-		}
-#else
-
-       		task = rtos_TaskFromPriority(priority);
 #endif
-		if (0 != task)
-		{
-			RTOS_TaskSet_RemoveMember(event->TasksWaiting, priority);
-			task->WaitFor = 0;
-			rtos_RemoveFromSleepers(task);
-			RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, priority);
-			RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
-			return RTOS_OK;
+        	task = rtos_TaskFromPriority(priority);
+#if defined(RTOS_SUPPORT_TIMESHARE)
 		}
+#endif
+	}
+
+	return task;
+}
+
+RTOS_RegInt rtos_SignalEvent(RTOS_EventHandle *event)
+{
+	RTOS_TaskPriority priority;
+	RTOS_Task *task;
+
+	task = rtos_GetFirstWaitingTask(event);
+
+	if (0 != task)
+	{
+		priority = task->Priority;
+		RTOS_TaskSet_RemoveMember(event->TasksWaiting, priority);
+		task->WaitFor = 0;
+		rtos_RemoveFromSleepers(task);
+		RTOS_TaskSet_RemoveMember(RTOS.WaitingTasks, priority);
+		RTOS_TaskSet_AddMember(RTOS.ReadyToRunTasks, priority);
+		return RTOS_OK;
 	}
 
 	return RTOS_TIMED_OUT;

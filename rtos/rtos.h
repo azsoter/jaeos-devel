@@ -82,6 +82,7 @@ extern "C" {
 #define RTOS_ERROR_OPERATION_NOT_PERMITTED     	-2
 #define RTOS_ERROR_PRIORITY_IN_USE       		-3
 #define RTOS_ERROR_OVERFLOW						-4
+#define RTOS_ERROR_INVALID_PRIORITY				-5
 
 #define RTOS_Priority_Idle			0
 
@@ -122,7 +123,7 @@ typedef RTOS_RegUInt RTOS_TaskPriority;
 #error RTOS_Priority_Highest is higher than the maximum supported on this target.
 #endif
 
-#if defined(RTOS_INCLUDE_NAKED_EVENTS) || defined(RTOS_INCLUDE_SEMAPHORES)
+#if defined(RTOS_INCLUDE_NAKED_EVENTS) || defined(RTOS_INCLUDE_SEMAPHORES) || defined(RTOS_INLCUDE_MUTEXES)
 #define RTOS_SUPPORT_EVENTS
 #endif
 
@@ -169,6 +170,7 @@ struct rtos_OS
 #endif
 	RTOS_RegInt			IsRunning;					// Is the OS running?
 	RTOS_Time			Time;						// System time in ticks.
+	RTOS_TaskSet		PrioritiesInUse;			// Priorities in Use.
 	RTOS_TaskSet    	ReadyToRunTasks;			// Tasks that are ready to run.
 #if defined(RTOS_SUPPORT_EVENTS)
 	RTOS_TaskSet        WaitingTasks;				// Tasks waiting for an event.
@@ -232,6 +234,7 @@ extern RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore);
 
 extern RTOS_RegInt  RTOS_PostSemaphore(RTOS_Semaphore *semaphore);
 extern RTOS_RegInt  RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout);
+
 
 // Structure representing a thread of execution (known as a task in RTOS parlance).
 struct rtos_Task
