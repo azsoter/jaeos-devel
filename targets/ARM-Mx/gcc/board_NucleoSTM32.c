@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2016-2017.
+* Copyright (c) Andras Zsoter 2016-2020.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@
 
 #define BOARD_STDOUT &huart2
 
+#if 0
 // Print something on the serial port that shows up when you plug in the Nucleo board
 // to a PC through USB.
 // These aren't a very efficient way to use the UART.
@@ -51,7 +52,42 @@ int Board_Puts(const char* str)
 	HAL_UART_Transmit(BOARD_STDOUT, str, strlen(str), 1000);
 	return 0;
 }
+#else
+// A more "manual" version, but at least it does not loose characters if more than one task is trying to print at the same time.
+// Make this the default for now.
+int Board_Putc(char c)
+{
+	int done = 0;
+	RTOS_SavedCriticalState(saved_state);
+	while (!done)
+	{
+		while (0 == ((BOARD_STDOUT)->Instance->ISR & UART_FLAG_TXE));
+		 RTOS_EnterCriticalSection(saved_state);
+			if ((0 != ((BOARD_STDOUT)->Instance->ISR & UART_FLAG_TXE)))
+			{
+				(BOARD_STDOUT)->Instance->TDR = c;
+				done = 1;
+			}
+		RTOS_ExitCriticalSection(saved_state);
+	}
+	return 0;
+}
 
+int Board_Puts(const char* str)
+{
+	char c;
+	if (0 == str)
+	{
+		return -1;	// Just to avoid crashes.
+	}
+
+	for (c = *str; 0 != c; c = *(++str))
+	{
+		Board_Putc(c);
+	}
+	return 0;
+}
+#endif
 // -------------------------------------------
 static int uart_init(void)
 {
