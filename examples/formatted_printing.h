@@ -32,10 +32,10 @@
 //
 extern int minimal_vsnprintf(char *restrict buffer, size_t n, const char *restrict format, va_list vlist);
 
-// The function test_printf() is a wrapper that uses uses a statically allocated buffer.
+// The function board_printf() is a wrapper that uses uses a statically allocated buffer.
 // Internally the buffer must be locked so that various threads don't stomp on each other's output.
 // Do NOT call it from an interrupt service routine.
-extern int test_printf(const char *format, ...);
+extern int board_printf(const char *format, ...);
 
 // Thjis is needed to initialize the semaphores guarding test_printf()'s buffer. Call it before the first use of test_printf().
 extern int PrintingInit(void);

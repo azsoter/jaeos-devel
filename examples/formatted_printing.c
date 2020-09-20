@@ -269,7 +269,7 @@ int minimal_vsnprintf(char *restrict buffer, size_t n, const char *restrict form
 #if defined(PC_TESTING)
 #include <stdio.h>
 char buffer[256];
-int test_printf(const char *format, ...)
+int board_printf(const char *format, ...)
 {
 	va_list ap;
 	int res;
@@ -283,22 +283,22 @@ int test_printf(const char *format, ...)
 int main()
 {
 	printf("X = %05d %#X %c %d\n",2, 4, '!', -25);
-	test_printf("X = %05d %#X %c %d\n",2, 4, '!', -25);
+	board_printf("X = %05d %#X %c %d\n",2, 4, '!', -25);
 
 	printf("X = %05d %#010X\n",2, 4);
-	test_printf("X = %05d %#010X\n",2, 4);
+	board_printf("X = %05d %#010X\n",2, 4);
 
 	printf("X = %05d %#08X %s\n",-2, -4, "Hello World.");
-	test_printf("X = %05d %#08X %s\n",-2, -4, "Hello World.");
+	board_printf("X = %05d %#08X %s\n",-2, -4, "Hello World.");
 
 	printf("main = %p 2 = %d %u\n", main, 2, -10);
-	test_printf("main = %p 2 = %d %u\n", main, 2, -10);
+	board_printf("main = %p 2 = %d %u\n", main, 2, -10);
 	return 0;
 }
 #else
 static char buffer[256];
 RTOS_Semaphore printBufferLock;
-int test_printf(const char *format, ...)
+int board_printf(const char *format, ...)
 {
 	va_list ap;
 	int res;
