@@ -31,8 +31,6 @@
 
 #include <usart.h>
 
-#define BOARD_STDOUT &huart2
-
 #if 0
 // Print something on the serial port that shows up when you plug in the Nucleo board
 // to a PC through USB.

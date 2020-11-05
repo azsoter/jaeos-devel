@@ -32,15 +32,21 @@
 // different board, or replace this section altogether.
 #if defined (STM32L476xx)
 #include <stm32l4xx_hal.h>
+#define BOARD_STDOUT &huart2
 #elif defined(STM32F401xE)
 #include <stm32f4xx_hal.h>
+#define BOARD_STDOUT &huart2
 #elif defined(STM32L152xE)
 #include <stm32l1xx_hal.h>
-#elif
+#define BOARD_STDOUT &huart2
+#elif defined(STM32F767xx)
+#include <stm32f7xx_hal.h>
+#define BOARD_STDOUT &huart3
+#else
 #error Unknown Microcontroller/board.
 #endif
 
-#if defined (STM32L476xx) || defined(STM32F401xE) || defined(STM32L152xE)
+#if defined (STM32L476xx) || defined(STM32F401xE) || defined(STM32L152xE) || defined(STM32F767xx)
 // May require redefinition depending on how you can retrieve clock frequency ion your set-up.
 // This shoudl be appropriate for the STM32.
 #define SYSTEM_CLOCK_FREQUENCY HAL_RCC_GetHCLKFreq()
