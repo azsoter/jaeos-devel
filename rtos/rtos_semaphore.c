@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Andras Zsoter 2015.
+* Copyright (c) Andras Zsoter 2015-2020.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -85,7 +85,7 @@ RTOS_RegInt RTOS_PostSemaphore(RTOS_Semaphore *semaphore)
 
 RTOS_RegInt RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout)
 {
-    	RTOS_RegInt result;
+    RTOS_RegInt result;
 	volatile RTOS_Task *thisTask;
 	RTOS_RegInt status;
 	RTOS_SavedCriticalState(saved_state);
@@ -148,8 +148,16 @@ RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore)
 {
 	RTOS_SemaphoreCount count = 0;
 	RTOS_SavedCriticalState(saved_state);
+
 #if defined(RTOS_USE_ASSERTS)
 	RTOS_ASSERT(0 != semaphore);
+#endif
+
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
+	if (0 == semaphore)
+	{
+        	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
 #endif
 	
 	RTOS_EnterCriticalSection(saved_state);
@@ -163,3 +171,25 @@ RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore)
 	return count;
 }
 
+// Reset a counting semphaphore's value to zero.
+RTOS_RegInt RTOS_ResetSemaphore(RTOS_Semaphore *semaphore)
+{
+	RTOS_SavedCriticalState(saved_state);
+
+#if defined(RTOS_USE_ASSERTS)
+	RTOS_ASSERT(0 != semaphore);
+#endif
+
+#if !defined(RTOS_DISABLE_RUNTIME_CHECKS)
+	if (0 == semaphore)
+	{
+        	return RTOS_ERROR_OPERATION_NOT_PERMITTED;
+	}
+#endif
+
+	RTOS_EnterCriticalSection(saved_state);
+	semaphore->Count = 0;
+	RTOS_ExitCriticalSection(saved_state);
+
+	return RTOS_OK;
+}

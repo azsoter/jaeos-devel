@@ -226,7 +226,7 @@ struct rtos_Semaphore
 extern RTOS_RegInt RTOS_CreateSemaphore(RTOS_Semaphore *semaphore, RTOS_SemaphoreCount initialCount);
 
 extern RTOS_SemaphoreCount RTOS_PeekSemaphore(RTOS_Semaphore *semaphore);
-
+extern RTOS_RegInt RTOS_ResetSemaphore(RTOS_Semaphore *semaphore);
 extern RTOS_RegInt  RTOS_PostSemaphore(RTOS_Semaphore *semaphore);
 extern RTOS_RegInt  RTOS_GetSemaphore(RTOS_Semaphore *semaphore, RTOS_Time timeout);
 
