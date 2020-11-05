@@ -266,6 +266,16 @@ int minimal_vsnprintf(char *restrict buffer, size_t n, const char *restrict form
 	return (int)count;
 }
 
+int minimal_snprintf(char *str, size_t size, const char *format, ...)
+{
+	va_list ap;
+	int res;
+	va_start(ap, format);
+	res = minimal_vsnprintf(str, size, format, ap);
+	va_end(ap);
+	return res;
+}
+
 #if defined(PC_TESTING)
 #include <stdio.h>
 char buffer[256];

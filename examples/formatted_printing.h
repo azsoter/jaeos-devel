@@ -23,6 +23,7 @@
 * THE SOFTWARE.
 *
 */
+#include <stddef.h>
 #include <stdarg.h>
 
 // The bare minimum to format a string (like sprintf() / vsnprintf() does).
@@ -31,6 +32,9 @@
 // Also an assumption was made that int is the same as int32_t.
 //
 extern int minimal_vsnprintf(char *restrict buffer, size_t n, const char *restrict format, va_list vlist);
+
+// Wrapper to make a usable snprintf().
+extern int minimal_snprintf(char *str, size_t size, const char *format, ...);
 
 // The function board_printf() is a wrapper that uses uses a statically allocated buffer.
 // Internally the buffer must be locked so that various threads don't stomp on each other's output.
