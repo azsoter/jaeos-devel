@@ -57,7 +57,7 @@ DEP = $(OBJ:.o=.d)
 vpath %.c $(PATHS)
 
 
-# Where your ARM compiler is installed.
+# Where your target compiler is installed.
 TOOL_BASE = /usr
 
 TOOL_PREFIX = 
@@ -69,8 +69,8 @@ SIZE = $(TOOL_BASE)/bin/$(TOOL_PREFIX)size
 
 # CFLAGS = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 
-CFLAGS = --verbose -std=gnu99 -ffreestanding -O2 -mtune=i386 -Wall -Wextra -nostartfiles -nostdlib -g -O2 -I./$(DEVICE_DIR) -I $(RTOS_DIR) -I $(DEVICE_DIR) -I$(DEVICE_COMMON_DIR) -I$(EXTRA_DIR) -I $(APP_DIR)
-LDFLAGS = -Wl,-nostdlib -T $(LINKER_SCRIPT) -lgcc 
+CFLAGS = --verbose -m32 -march=i386 -fno-PIE -static -std=gnu99 -ffreestanding -O2 -mtune=i386 -Wall -Wextra -nostartfiles -nostdlib -nodefaultlibs -g -O2 -I./$(DEVICE_DIR) -I $(RTOS_DIR) -I $(DEVICE_DIR) -I$(DEVICE_COMMON_DIR) -I$(EXTRA_DIR) -I $(APP_DIR)
+LDFLAGS = -Wl,-nostdlib -Wl,-static -T $(LINKER_SCRIPT) # -lgcc 
 
 all:	$(BUILD_DIR) $(TARGETS)
 	@$(SIZE) $(BUILD_DIR)/jaeos.elf
